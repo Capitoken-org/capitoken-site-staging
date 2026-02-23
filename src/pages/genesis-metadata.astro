@@ -4,91 +4,90 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 const TITLE = "Genesis Council — NFT Metadata";
 const DESC =
   "User-friendly view of the Genesis Council NFT metadata. The raw JSON remains available for marketplaces.";
-const BASE_URL = import.meta.env.BASE_URL || "/";
-const withBase = (path: string) =>
-  (BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL) + path;
+
+const BASE = import.meta.env.BASE_URL || "/";
+const withBase = (p) => {
+  const clean = String(p || "");
+  return clean.startsWith("/") ? `${BASE}${clean.slice(1)}` : `${BASE}${clean}`;
+};
 
 const JSON_URL = withBase("/genesis/metadata/1.json");
 const IMG_FALLBACK = withBase("/genesis/images/genesis.png");
 ---
 
 <BaseLayout title={TITLE} description={DESC}>
-  <main class="page">
+  <main class="container">
+    <section class="hero">
+      <div class="pill">
+        <span class="pill__dot"></span>
+        <span class="iconwrap">
+          <img class="icon icon--sm icon-neutral" src={withBase("/icons/info.svg")} alt="" />
+          <span>Genesis Metadata</span>
+        </span>
+      </div>
+
+      <h1>Genesis Council — Metadata</h1>
+
+      <p class="hero__lead">
+        This is a user-friendly view. Marketplaces read the raw JSON. You can still download it below.
+      </p>
+
+      <div class="actions" style="margin-top:12px; gap:10px; flex-wrap:wrap;">
+        <a class="btn btn--primary" href={JSON_URL} target="_blank" rel="noopener">Download JSON</a>
+        <a class="btn" href={withBase("/genesis/")} >Back to Genesis</a>
+      </div>
+    </section>
+
     <section class="section">
-      <div class="section-inner">
-        <h1 class="page-title">Genesis Council — Metadata</h1>
-        <p class="page-subtitle">
-          This is a user-friendly view. Marketplaces read the raw JSON. You can
-          still download it below.
-        </p>
+      <div class="card">
+        <div id="metaLoading" class="small">Loading metadata…</div>
+        <div id="metaError" class="small" style="display:none;">
+          Could not load metadata. Please try again. If this persists, verify the official domain.
+        </div>
 
-        <div class="launch-grid" style="margin-top:16px;">
-          <div class="card">
-            <div class="card-inner">
-              <div class="card-title-row">
-                <h2 class="card-title">NFT Metadata (Human View)</h2>
-                <a class="btn btn-ghost" href={JSON_URL} target="_blank" rel="noopener">
-                  Download JSON
+        <div id="metaWrap" style="display:none;">
+          <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;">
+            <div style="width:240px; max-width:100%;">
+              <img
+                id="metaImage"
+                src={IMG_FALLBACK}
+                alt="Genesis Council NFT"
+                style="width:240px; max-width:100%; border-radius:14px; border:1px solid rgba(255,255,255,0.10);"
+                loading="lazy"
+              />
+            </div>
+
+            <div style="flex:1; min-width:260px;">
+              <h2 id="metaName" style="margin:0 0 6px 0;"></h2>
+              <p id="metaDesc" class="small" style="margin:0 0 12px 0;"></p>
+
+              <div class="actions" style="gap:10px; flex-wrap:wrap;">
+                <a id="metaExternal" class="btn btn--primary" href="#" target="_blank" rel="noopener" style="display:none;">
+                  Official Page
                 </a>
-              </div>
-
-              <div id="metaLoading" class="muted" style="margin-top:10px;">
-                Loading metadata…
-              </div>
-
-              <div id="metaError" class="muted" style="display:none; margin-top:10px;">
-                Could not load metadata. Please try again. If this persists, verify the official domain.
-              </div>
-
-              <div id="metaWrap" style="display:none; margin-top:14px;">
-                <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;">
-                  <div style="width:220px; max-width:100%;">
-                    <img
-                      id="metaImage"
-                      src={IMG_FALLBACK}
-                      alt="Genesis Council NFT"
-                      style="width:220px; max-width:100%; border-radius:14px; display:block;"
-                      loading="lazy"
-                    />
-                  </div>
-
-                  <div style="flex:1; min-width:260px;">
-                    <div class="badge" style="display:inline-flex; margin-bottom:10px;">
-                      Official view
-                    </div>
-
-                    <h3 id="metaName" style="margin:0 0 6px 0;"></h3>
-                    <p id="metaDesc" class="muted" style="margin:0 0 12px 0;"></p>
-
-                    <div class="actions" style="gap:10px; flex-wrap:wrap;">
-                      <a id="metaExternal" class="btn btn-secondary" href="#" target="_blank" rel="noopener" style="display:none;">
-                        Official Page
-                      </a>
-                      <a id="metaRaw" class="btn btn-ghost" href={JSON_URL} target="_blank" rel="noopener">
-                        View Raw JSON
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                <div style="margin-top:16px;">
-                  <h3 style="margin:0 0 10px 0;">Attributes</h3>
-                  <div id="metaAttrs" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;"></div>
-                </div>
-
-                <details style="margin-top:14px;">
-                  <summary>Show raw JSON (advanced)</summary>
-                  <pre id="metaPretty" style="white-space:pre-wrap; word-break:break-word; margin-top:10px;"></pre>
-                </details>
+                <a class="btn" href={JSON_URL} target="_blank" rel="noopener">View Raw JSON</a>
               </div>
             </div>
           </div>
-        </div>
 
-        <p class="muted" style="margin-top:12px;">
-          Tip: If a link to “Mint now” appears anywhere, verify it first. Official links live only on this site.
-        </p>
+          <div style="margin-top:16px;">
+            <h3 style="margin:0 0 10px 0;">Attributes</h3>
+            <div
+              id="metaAttrs"
+              style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;"
+            ></div>
+          </div>
+
+          <details style="margin-top:14px;">
+            <summary>Show raw JSON (advanced)</summary>
+            <pre id="metaPretty" style="white-space:pre-wrap; word-break:break-word; margin-top:10px;"></pre>
+          </details>
+        </div>
       </div>
+
+      <p class="small" style="margin-top:14px;">
+        Tip: If a link to “Mint now” appears anywhere, verify it first. Official links live only on this site.
+      </p>
     </section>
   </main>
 
@@ -127,21 +126,20 @@ const IMG_FALLBACK = withBase("/genesis/images/genesis.png");
         els.attrs.innerHTML = "";
         const attrs = Array.isArray(meta?.attributes) ? meta.attributes : [];
         if (!attrs.length) {
-          els.attrs.innerHTML = '<div class="muted">No attributes found.</div>';
+          els.attrs.innerHTML = '<div class="small">No attributes found.</div>';
         } else {
           for (const a of attrs) {
             const k = (a?.trait_type ?? "Trait").toString();
             const v = (a?.value ?? "").toString();
             const card = document.createElement("div");
             card.className = "card";
+            card.style.padding = "12px";
             card.innerHTML =
-              '<div class="card-inner" style="padding:12px;">' +
-              '<div class="muted" style="font-size:12px; margin-bottom:6px;">' +
+              '<div class="small" style="margin-bottom:6px;">' +
               k +
               "</div>" +
-              "<div style='font-weight:700;'>" +
+              "<div style='font-weight:800;'>" +
               v +
-              "</div>" +
               "</div>";
             els.attrs.appendChild(card);
           }

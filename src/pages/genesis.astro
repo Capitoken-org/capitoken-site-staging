@@ -5,9 +5,11 @@ const TITLE = "CAPI Genesis Council — NFT Membership";
 const DESC =
   "Genesis Council is an optional membership layer for identity and community direction. It does not grant financial rights.";
 
-const BASE_URL = import.meta.env.BASE_URL || "/";
-const withBase = (path) =>
-  (BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL) + path;
+const BASE = import.meta.env.BASE_URL || "/";
+const withBase = (p) => {
+  const clean = String(p || "");
+  return clean.startsWith("/") ? `${BASE}${clean.slice(1)}` : `${BASE}${clean}`;
+};
 
 const METADATA_HUMAN = withBase("/genesis-metadata/");
 const METADATA_JSON = withBase("/genesis/metadata/1.json");
@@ -15,96 +17,90 @@ const IMAGE_URL = withBase("/genesis/images/genesis.png");
 ---
 
 <BaseLayout title={TITLE} description={DESC}>
-  <main class="page">
+  <main class="container">
+    <section class="hero">
+      <div class="pill">
+        <span class="pill__dot"></span>
+        <span class="iconwrap">
+          <img class="icon icon--sm icon-neutral" src={withBase("/icons/star.svg")} alt="" />
+          <span>Genesis Council</span>
+        </span>
+      </div>
+
+      <h1>CAPI Genesis Council</h1>
+
+      <p class="hero__lead">
+        Genesis Council is an <strong>optional membership layer</strong> for identity and community direction.
+        It does <strong>not</strong> grant financial rights. Official rules and links live here —
+        if it’s not listed on capitoken.org, assume it’s not official.
+      </p>
+    </section>
+
     <section class="section">
-      <div class="section-inner">
-        <h1 class="page-title">CAPI Genesis Council NFT Membership</h1>
+      <div class="grid">
+        <!-- RULES -->
+        <div class="card col-6">
+          <h3 style="margin:0 0 8px 0;">Rules (Fixed)</h3>
 
-        <p class="page-subtitle">
-          Genesis Council is an <strong>optional membership layer</strong> for
-          identity and community direction. It does <strong>not</strong> grant
-          financial rights. Official rules and links live here — if it’s not
-          listed on capitoken.org, assume it’s not official.
-        </p>
+          <ul style="margin:10px 0 0 18px; line-height:1.9;">
+            <li><strong>Max supply:</strong> 7000</li>
+            <li><strong>Max per wallet:</strong> 1</li>
+            <li><strong>Eligibility:</strong> ≥ 150,000,000 CAPI balance</li>
+            <li>
+              <strong>Mint closes:</strong> 2026-04-17T23:17:00Z
+              <span class="small" style="display:block; margin-top:4px;">
+                (same instant as token ownership renounce)
+              </span>
+            </li>
+          </ul>
 
-        <div class="launch-grid" style="margin-top:16px;">
-          
-          <!-- RULES CARD -->
-          <div class="card">
-            <div class="card-inner">
-              <h2 class="card-title">Rules (Fixed)</h2>
+          <p class="small" style="margin-top:12px;">
+            This page is informational. Any “mint now” link must be verified here before you interact.
+          </p>
 
-              <ul style="margin-top:12px; line-height:1.8;">
-                <li><strong>Max supply:</strong> 7000</li>
-                <li><strong>Max per wallet:</strong> 1</li>
-                <li><strong>Eligibility:</strong> ≥ 150,000,000 CAPI balance</li>
-                <li>
-                  <strong>Mint closes:</strong> 2026-04-17T23:17:00Z  
-                  (same instant as token ownership renounce)
-                </li>
-              </ul>
-
-              <p class="muted" style="margin-top:12px;">
-                This page is informational. Any “mint now” link must be verified
-                here before you interact.
-              </p>
-
-              <div class="actions" style="margin-top:16px; gap:10px; flex-wrap:wrap;">
-                <a class="btn btn-secondary" href={METADATA_HUMAN}>
-                  View Metadata
-                </a>
-
-                <a class="btn btn-ghost" href={METADATA_JSON} target="_blank" rel="noopener">
-                  Raw JSON
-                </a>
-
-                <button class="btn btn-primary" disabled>
-                  Mint (coming soon)
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- CONTRACT CARD -->
-          <div class="card">
-            <div class="card-inner">
-              <h2 class="card-title">Contract (Official)</h2>
-
-              <div class="muted" style="margin-top:10px;">
-                TBA
-              </div>
-
-              <p class="muted" style="margin-top:10px;">
-                The Genesis Council NFT contract will be posted here once
-                deployed and verified.
-              </p>
-
-              <div class="badge" style="margin-top:10px; display:inline-flex;">
-                Symbol: CAPI-GEN
-              </div>
-
-              <div style="margin-top:16px;">
-                <img
-                  src={IMAGE_URL}
-                  alt="Genesis Council NFT"
-                  style="width:240px; max-width:100%; border-radius:14px;"
-                  loading="lazy"
-                />
-              </div>
-
-              <p class="muted" style="margin-top:12px;">
-                Safety: never trust DMs. Always verify the contract address on
-                this website before interacting.
-              </p>
-            </div>
+          <div class="actions" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
+            <a class="btn btn--primary" href={METADATA_HUMAN}>View Metadata</a>
+            <a class="btn" href={METADATA_JSON} target="_blank" rel="noopener">Raw JSON</a>
+            <button class="btn" disabled type="button">Mint (coming soon)</button>
           </div>
         </div>
 
-        <p class="muted" style="margin-top:18px;">
-          Tip: If you are building community incentives, link Genesis Council
-          participation to on-chain actions — not promises.
-        </p>
+        <!-- CONTRACT -->
+        <div class="card col-6">
+          <h3 style="margin:0 0 8px 0;">Contract (Official)</h3>
+
+          <div class="kv">
+            <strong>Status</strong>
+            <span class="mono">TBA</span>
+          </div>
+
+          <p class="small" style="margin-top:10px;">
+            The Genesis Council NFT contract will be posted here once deployed and verified.
+          </p>
+
+          <div class="pill" style="margin-top:10px;">
+            <span class="pill__dot"></span>
+            <span class="mono">Symbol: CAPI-GEN</span>
+          </div>
+
+          <div style="margin-top:14px;">
+            <img
+              src={IMAGE_URL}
+              alt="Genesis Council NFT"
+              style="width:260px; max-width:100%; border-radius:14px; border:1px solid rgba(255,255,255,0.10);"
+              loading="lazy"
+            />
+          </div>
+
+          <p class="small" style="margin-top:12px;">
+            Safety: never trust DMs. Always verify the contract address on this website before interacting.
+          </p>
+        </div>
       </div>
+
+      <p class="small" style="margin-top:14px;">
+        Tip: If you are building community incentives, link Genesis Council participation to on-chain actions — not promises.
+      </p>
     </section>
   </main>
 </BaseLayout>
