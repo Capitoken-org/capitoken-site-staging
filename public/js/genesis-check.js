@@ -1,17 +1,18 @@
-// Genesis Council — eligibility checker (no external libs)
-// Uses window.ethereum + eth_call to read CAPI ERC-20 balanceOf(wallet).
 (function () {
   const $ = (id) => document.getElementById(id);
 
   const els = {
     connectBtn: $("gcConnectBtn"),
     refreshBtn: $("gcRefreshBtn"),
+    switchBtn: $("gcSwitchBtn"),
+
     mintBtn: $("gcMintBtn"),
     mintHint: $("gcMintHint"),
 
     walletRow: $("gcWalletRow"),
     wallet: $("gcWallet"),
     netText: $("gcNetText"),
+    netHint: $("gcNetHint"),
 
     countdownText: $("gcCountdownText"),
     closeUtc: $("gcCloseUtc"),
@@ -21,18 +22,21 @@
     shortBy: $("gcShortBy"),
 
     statusText: $("gcStatusText"),
-
     nftAddr: $("gcNftAddr"),
   };
 
   const CFG = window.CAPI_CONFIG || {};
   const G = CFG.genesisNft || {};
+
   const TOKEN_ADDR = (CFG.CONTRACT_ADDRESS || "").toLowerCase();
+  const RPC_HTTP = (CFG.RPC_HTTP || "").trim();
   const DECIMALS = Number(CFG.TOKEN_DECIMALS_EXPECTED ?? 18);
 
-  const REQUIRED_CAPI = BigInt(G.minCapiBalance ?? 150000000); // whole tokens
+  const REQUIRED_CAPI = BigInt(G.minCapiBalance ?? 150000000);
   const CLOSE_ISO = String(G.mintClosesUtcIso || "2026-04-17T23:17:00Z");
   const NFT_ADDR = (G.nftContractAddress || "").trim();
+
+  const ETH_MAINNET_CHAIN_ID = "0x1";
 
   function hasEthereum() {
     return typeof window !== "undefined" && window.ethereum && window.ethereum.request;
@@ -42,13 +46,7 @@
     if (els.statusText) els.statusText.textContent = msg;
   }
 
-  function shortAddr(a) {
-    if (!a || a.length < 10) return a || "";
-    return a.slice(0, 6) + "…" + a.slice(-4);
-  }
-
   function commaInt(s) {
-    // s is integer string
     return s.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   }
 
@@ -60,7 +58,6 @@
     const whole = v / base;
     const frac = v % base;
 
-    // show up to 4 decimal places (trim trailing zeros)
     let fracStr = frac.toString().padStart(decimals, "0").slice(0, 4);
     fracStr = fracStr.replace(/0+$/, "");
 
@@ -70,19 +67,10 @@
   }
 
   function encodeBalanceOf(address) {
-    // balanceOf(address) selector: 0x70a08231
-    const selector = "70a08231";
+    const selector = "70a08231"; // balanceOf(address)
     const addr = address.toLowerCase().replace(/^0x/, "");
     const padded = addr.padStart(64, "0");
     return "0x" + selector + padded;
-  }
-
-  async function ethCall(to, data) {
-    const result = await window.ethereum.request({
-      method: "eth_call",
-      params: [{ to, data }, "latest"],
-    });
-    return result;
   }
 
   function hexToBigInt(hex) {
@@ -91,8 +79,7 @@
   }
 
   async function getChainId() {
-    const cid = await window.ethereum.request({ method: "eth_chainId" });
-    return cid; // hex string
+    return await window.ethereum.request({ method: "eth_chainId" });
   }
 
   async function getAccounts() {
@@ -101,6 +88,40 @@
 
   async function requestAccounts() {
     return await window.ethereum.request({ method: "eth_requestAccounts" });
+  }
+
+  async function switchToEthereumMainnet() {
+    // tries to switch; if not added, wallet may need addEthereumChain, but Mainnet usually exists.
+    return await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: ETH_MAINNET_CHAIN_ID }],
+    });
+  }
+
+  async function ethCallViaWallet(to, data) {
+    return await window.ethereum.request({
+      method: "eth_call",
+      params: [{ to, data }, "latest"],
+    });
+  }
+
+  async function ethCallViaRpcHttp(to, data) {
+    if (!RPC_HTTP) throw new Error("RPC_HTTP not configured");
+    const body = {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "eth_call",
+      params: [{ to, data }, "latest"],
+    };
+    const res = await fetch(RPC_HTTP, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error("RPC HTTP " + res.status);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error.message || "RPC error");
+    return json.result;
   }
 
   function updateCountdown() {
@@ -123,29 +144,23 @@
       const s = sec % 60;
 
       const pad2 = (n) => String(n).padStart(2, "0");
-      const out = `${days}d ${pad2(hrs)}h ${pad2(mins)}m ${pad2(s)}s`;
-
-      if (els.countdownText) els.countdownText.textContent = out;
+      if (els.countdownText) els.countdownText.textContent = `${days}d ${pad2(hrs)}h ${pad2(mins)}m ${pad2(s)}s`;
     } catch (_) {}
   }
 
   function setNftAddr() {
     if (!els.nftAddr) return;
-    if (NFT_ADDR && /^0x[a-fA-F0-9]{40}$/.test(NFT_ADDR)) {
-      els.nftAddr.textContent = NFT_ADDR;
-    } else {
-      els.nftAddr.textContent = "TBA";
-    }
+    if (NFT_ADDR && /^0x[a-fA-F0-9]{40}$/.test(NFT_ADDR)) els.nftAddr.textContent = NFT_ADDR;
+    else els.nftAddr.textContent = "TBA";
   }
 
   function setRequiredText() {
     if (!els.required) return;
-    const req = REQUIRED_CAPI.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const req = commaInt(REQUIRED_CAPI.toString());
     els.required.textContent = `≥ ${req} CAPI`;
   }
 
   function setMintState({ connected, eligible }) {
-    // No NFT contract yet => keep disabled, but show reasons.
     if (!els.mintBtn || !els.mintHint) return;
 
     if (!connected) {
@@ -154,26 +169,22 @@
       els.mintHint.textContent = "Connect wallet to check eligibility.";
       return;
     }
-
     if (!eligible) {
       els.mintBtn.disabled = true;
       els.mintBtn.textContent = "Mint (locked)";
       els.mintHint.textContent = "Not eligible yet — reach the required CAPI balance.";
       return;
     }
-
-    // eligible
     if (!NFT_ADDR || !/^0x[a-fA-F0-9]{40}$/.test(NFT_ADDR)) {
       els.mintBtn.disabled = true;
       els.mintBtn.textContent = "Mint (coming soon)";
-      els.mintHint.textContent = "Eligible ✅  Mint opens when the official NFT contract is deployed.";
+      els.mintHint.textContent = "Eligible ✅ Mint opens when the official NFT contract is deployed.";
       return;
     }
-
-    // If in future: enable mint (after you implement mint tx)
+    // Future: enable mint tx when contract exists.
     els.mintBtn.disabled = true;
     els.mintBtn.textContent = "Mint (coming soon)";
-    els.mintHint.textContent = "Eligible ✅  Mint UI will activate here after contract deployment.";
+    els.mintHint.textContent = "Eligible ✅ Mint UI will activate here after contract deployment.";
   }
 
   async function refreshStatus(wallet) {
@@ -183,45 +194,68 @@
     if (!wallet || !/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
       if (els.balance) els.balance.textContent = "—";
       if (els.shortBy) els.shortBy.textContent = "—";
+      if (els.walletRow) els.walletRow.style.display = "none";
+      if (els.refreshBtn) els.refreshBtn.disabled = true;
+      if (els.switchBtn) els.switchBtn.style.display = "none";
+      if (els.netHint) els.netHint.textContent = "";
       setStatus("Connect wallet to check eligibility.");
       setMintState({ connected: false, eligible: false });
       return;
     }
 
-    // show network
+    if (els.walletRow) els.walletRow.style.display = "";
+    if (els.refreshBtn) els.refreshBtn.disabled = false;
+
+    // Network detection
+    let chainId = "unknown";
     try {
-      const cid = await getChainId();
-      // mainnet = 0x1
-      els.netText.textContent = cid === "0x1" ? "Ethereum Mainnet" : `Chain ${cid}`;
+      chainId = await getChainId();
+      if (els.netText) els.netText.textContent = chainId === "0x1" ? "Ethereum Mainnet" : `Wrong network (${chainId})`;
     } catch (_) {}
 
-    // read balance
-    try {
-      const data = encodeBalanceOf(wallet);
-      const hex = await ethCall(TOKEN_ADDR, data);
-      const balWei = hexToBigInt(hex);
-
-      const balText = formatUnits(balWei, DECIMALS);
-      if (els.balance) els.balance.textContent = `${balText} CAPI`;
-
-      // compute required in wei (whole tokens)
-      const reqWei = REQUIRED_CAPI * (10n ** BigInt(DECIMALS));
-      const shortWei = reqWei > balWei ? reqWei - balWei : 0n;
-      const eligible = balWei >= reqWei;
-
-      if (els.shortBy) {
-        if (eligible) els.shortBy.textContent = "0 CAPI";
-        else els.shortBy.textContent = `${formatUnits(shortWei, DECIMALS)} CAPI`;
-      }
-
-      if (eligible) setStatus("Eligible ✅ You can mint once the official contract is live.");
-      else setStatus("Not eligible yet ❌ Increase your CAPI balance to qualify.");
-
-      setMintState({ connected: true, eligible });
-    } catch (e) {
-      setStatus("Could not read on-chain balance. Check wallet/network and try again.");
-      setMintState({ connected: true, eligible: false });
+    const wrongNetwork = chainId !== ETH_MAINNET_CHAIN_ID;
+    if (els.switchBtn) els.switchBtn.style.display = wrongNetwork ? "" : "none";
+    if (els.netHint) {
+      els.netHint.textContent = wrongNetwork
+        ? "You are not on Ethereum Mainnet. Click “Switch to Ethereum”. (We can still read balance via RPC fallback.)"
+        : "";
     }
+
+    // Read balanceOf via wallet first; fallback to RPC_HTTP if wallet call fails or wrong network
+    const data = encodeBalanceOf(wallet);
+
+    let hex = null;
+    try {
+      // wallet call may fail if wrong network, but try anyway
+      hex = await ethCallViaWallet(TOKEN_ADDR, data);
+    } catch (_) {}
+
+    if (!hex) {
+      try {
+        hex = await ethCallViaRpcHttp(TOKEN_ADDR, data);
+      } catch (e) {
+        setStatus("Could not read on-chain balance. Check wallet/network and try again.");
+        setMintState({ connected: true, eligible: false });
+        return;
+      }
+    }
+
+    const balWei = hexToBigInt(hex);
+    const balText = formatUnits(balWei, DECIMALS);
+    if (els.balance) els.balance.textContent = `${balText} CAPI`;
+
+    const reqWei = REQUIRED_CAPI * (10n ** BigInt(DECIMALS));
+    const shortWei = reqWei > balWei ? reqWei - balWei : 0n;
+    const eligible = balWei >= reqWei;
+
+    if (els.shortBy) {
+      els.shortBy.textContent = eligible ? "0 CAPI" : `${formatUnits(shortWei, DECIMALS)} CAPI`;
+    }
+
+    if (eligible) setStatus("Eligible ✅ You can mint once the official contract is live.");
+    else setStatus("Not eligible yet ❌ Increase your CAPI balance to qualify.");
+
+    setMintState({ connected: true, eligible });
   }
 
   async function init() {
@@ -245,9 +279,7 @@
     const connected = accounts && accounts.length > 0;
     if (connected) {
       const wallet = accounts[0];
-      if (els.walletRow) els.walletRow.style.display = "";
       if (els.wallet) els.wallet.textContent = wallet;
-      if (els.refreshBtn) els.refreshBtn.disabled = false;
       setStatus("Wallet connected. Reading on-chain balance…");
       await refreshStatus(wallet);
     } else {
@@ -255,16 +287,13 @@
       setMintState({ connected: false, eligible: false });
     }
 
-    // Events
     if (els.connectBtn) {
       els.connectBtn.addEventListener("click", async () => {
         try {
           const accs = await requestAccounts();
           const wallet = accs && accs[0];
           if (wallet) {
-            if (els.walletRow) els.walletRow.style.display = "";
             if (els.wallet) els.wallet.textContent = wallet;
-            if (els.refreshBtn) els.refreshBtn.disabled = false;
             setStatus("Wallet connected. Reading on-chain balance…");
             await refreshStatus(wallet);
           }
@@ -287,19 +316,28 @@
       });
     }
 
-    // react to wallet changes
+    if (els.switchBtn) {
+      els.switchBtn.addEventListener("click", async () => {
+        try {
+          await switchToEthereumMainnet();
+          const accs = await getAccounts();
+          const wallet = accs && accs[0];
+          setStatus("Switched network. Refreshing…");
+          await refreshStatus(wallet);
+        } catch (_) {
+          setStatus("Network switch cancelled. You can still refresh; RPC fallback may work.");
+        }
+      });
+    }
+
     try {
       window.ethereum.on("accountsChanged", async (accs) => {
         const wallet = accs && accs[0];
         if (wallet) {
-          if (els.walletRow) els.walletRow.style.display = "";
           if (els.wallet) els.wallet.textContent = wallet;
-          if (els.refreshBtn) els.refreshBtn.disabled = false;
           setStatus("Account changed. Reading on-chain balance…");
           await refreshStatus(wallet);
         } else {
-          if (els.walletRow) els.walletRow.style.display = "none";
-          if (els.refreshBtn) els.refreshBtn.disabled = true;
           await refreshStatus(null);
         }
       });
@@ -313,10 +351,6 @@
     } catch (_) {}
   }
 
-  // Boot
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
 })();

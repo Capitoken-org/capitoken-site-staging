@@ -1,9 +1,9 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 
-const TITLE = "CAPI Genesis Council — NFT Membership";
+const TITLE = "CAPI Genesis Council — Eligibility Portal";
 const DESC =
-  "Genesis Council is an optional membership layer for identity and community direction. It does not grant financial rights.";
+  "Connect wallet to check Genesis Council eligibility on-chain. Shows your CAPI balance, how much you’re missing, and mint status.";
 
 const BASE = import.meta.env.BASE_URL || "/";
 const withBase = (p) => {
@@ -14,6 +14,7 @@ const withBase = (p) => {
 const METADATA_HUMAN = withBase("/genesis-metadata/");
 const METADATA_JSON = withBase("/genesis/metadata/1.json");
 const IMAGE_URL = withBase("/genesis/images/genesis.png");
+const GENESIS_JS = withBase("/js/genesis-check.js");
 ---
 
 <BaseLayout title={TITLE} description={DESC}>
@@ -21,66 +22,110 @@ const IMAGE_URL = withBase("/genesis/images/genesis.png");
     <section class="hero">
       <div class="pill">
         <span class="pill__dot"></span>
-        <span class="iconwrap">
-          <img class="icon icon--sm icon-neutral" src={withBase("/icons/star.svg")} alt="" />
-          <span>Genesis Council</span>
-        </span>
+        <span class="mono">Genesis Council</span>
       </div>
 
       <h1>CAPI Genesis Council</h1>
 
       <p class="hero__lead">
-        Genesis Council is an <strong>optional membership layer</strong> for identity and community direction.
-        It does <strong>not</strong> grant financial rights. Official rules and links live here —
-        if it’s not listed on capitoken.org, assume it’s not official.
+        This page is an <strong>on-chain eligibility portal</strong>. Connect your wallet to see your exact CAPI balance and how much you’re missing.
+        This NFT is an <strong>optional membership layer</strong> for identity and community direction. It does <strong>not</strong> grant financial rights.
+        If it’s not listed on capitoken.org, assume it’s not official.
       </p>
+
+      <div class="actions" style="margin-top:12px; gap:10px; flex-wrap:wrap;">
+        <button id="gcConnectBtn" class="btn btn--primary" type="button">Connect Wallet</button>
+        <button id="gcRefreshBtn" class="btn" type="button" disabled>Refresh</button>
+        <button id="gcSwitchBtn" class="btn" type="button" style="display:none;">Switch to Ethereum</button>
+
+        <a class="btn" href={METADATA_HUMAN}>Marketplace Metadata</a>
+        <a class="btn" href={METADATA_JSON} target="_blank" rel="noopener">Raw JSON</a>
+      </div>
+
+      <div id="gcWalletRow" class="small" style="margin-top:10px; display:none;">
+        Wallet: <span id="gcWallet" class="mono"></span>
+
+        <span id="gcNet" class="pill" style="margin-left:10px; display:inline-flex;">
+          <span class="pill__dot"></span>
+          <span class="mono" id="gcNetText">Network</span>
+        </span>
+
+        <span id="gcNetHint" class="small" style="display:block; margin-top:6px;"></span>
+      </div>
+
+      <div id="gcCountdown" class="small" style="margin-top:8px;">
+        Mint closes in: <span class="mono" id="gcCountdownText">—</span>
+        <span class="small" style="display:block; margin-top:4px;">
+          Close time (UTC): <span class="mono" id="gcCloseUtc">—</span>
+        </span>
+      </div>
     </section>
 
     <section class="section">
       <div class="grid">
-        <!-- RULES -->
+        <!-- ELIGIBILITY -->
         <div class="card col-6">
-          <h3 style="margin:0 0 8px 0;">Rules (Fixed)</h3>
+          <h3 style="margin:0 0 8px 0;">Eligibility (On-chain)</h3>
 
-          <ul style="margin:10px 0 0 18px; line-height:1.9;">
-            <li><strong>Max supply:</strong> 7000</li>
-            <li><strong>Max per wallet:</strong> 1</li>
-            <li><strong>Eligibility:</strong> ≥ 150,000,000 CAPI balance</li>
-            <li>
-              <strong>Mint closes:</strong> 2026-04-17T23:17:00Z
-              <span class="small" style="display:block; margin-top:4px;">
-                (same instant as token ownership renounce)
-              </span>
-            </li>
-          </ul>
+          <div class="kv">
+            <strong>Required</strong>
+            <span class="mono" id="gcRequired">—</span>
+          </div>
+
+          <div class="kv">
+            <strong>Your balance</strong>
+            <span class="mono" id="gcBalance">—</span>
+          </div>
+
+          <div class="kv">
+            <strong>Short by</strong>
+            <span class="mono" id="gcShortBy">—</span>
+          </div>
+
+          <div id="gcStatusWrap" style="margin-top:12px;">
+            <div class="pill" id="gcStatusPill" style="display:inline-flex;">
+              <span class="pill__dot"></span>
+              <span class="mono" id="gcStatusText">Connect wallet to check eligibility.</span>
+            </div>
+          </div>
 
           <p class="small" style="margin-top:12px;">
-            This page is informational. Any “mint now” link must be verified here before you interact.
+            Balance is read directly from the official CAPI contract. If your wallet is on the wrong network, we’ll ask you to switch —
+            and we also use a safe read-only RPC fallback for reliability.
           </p>
 
           <div class="actions" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
-            <a class="btn btn--primary" href={METADATA_HUMAN}>View Metadata</a>
-            <a class="btn" href={METADATA_JSON} target="_blank" rel="noopener">Raw JSON</a>
-            <button class="btn" disabled type="button">Mint (coming soon)</button>
+            <a class="btn" href={withBase("/#launch-panel")}>Go to Launch Panel</a>
+            <a class="btn" href={withBase("/verify/")}>Verify Official Links</a>
           </div>
         </div>
 
-        <!-- CONTRACT -->
+        <!-- MINT / CONTRACT -->
         <div class="card col-6">
-          <h3 style="margin:0 0 8px 0;">Contract (Official)</h3>
+          <h3 style="margin:0 0 8px 0;">Mint (ERC-721)</h3>
 
           <div class="kv">
-            <strong>Status</strong>
-            <span class="mono">TBA</span>
+            <strong>Max supply</strong>
+            <span class="mono">7000</span>
+          </div>
+
+          <div class="kv">
+            <strong>Max per wallet</strong>
+            <span class="mono">1</span>
+          </div>
+
+          <div class="kv">
+            <strong>Contract</strong>
+            <span class="mono" id="gcNftAddr">TBA</span>
           </div>
 
           <p class="small" style="margin-top:10px;">
-            The Genesis Council NFT contract will be posted here once deployed and verified.
+            Mint is <strong>free</strong> (gas only). The official contract address will be posted here once deployed and verified.
           </p>
 
-          <div class="pill" style="margin-top:10px;">
-            <span class="pill__dot"></span>
-            <span class="mono">Symbol: CAPI-GEN</span>
+          <div class="actions" style="margin-top:12px; gap:10px; flex-wrap:wrap;">
+            <button id="gcMintBtn" class="btn btn--primary" type="button" disabled>Mint (coming soon)</button>
+            <span class="small" id="gcMintHint">Connect wallet to check eligibility.</span>
           </div>
 
           <div style="margin-top:14px;">
@@ -99,8 +144,10 @@ const IMAGE_URL = withBase("/genesis/images/genesis.png");
       </div>
 
       <p class="small" style="margin-top:14px;">
-        Tip: If you are building community incentives, link Genesis Council participation to on-chain actions — not promises.
+        This portal is designed to drive on-chain participation through transparent rules — not promises.
       </p>
     </section>
   </main>
+
+  <script src={GENESIS_JS} defer></script>
 </BaseLayout>
