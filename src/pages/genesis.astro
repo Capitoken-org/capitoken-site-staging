@@ -1,157 +1,110 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 
-const TITLE = "Genesis Council — Capitoken (CAPI)";
+const TITLE = "CAPI Genesis Council — NFT Membership";
 const DESC =
-  "Genesis Council is an optional NFT membership layer for identity and community direction. Official info only.";
+  "Genesis Council is an optional membership layer for identity and community direction. It does not grant financial rights.";
 
-const BASE = import.meta.env.BASE_URL || "/";
-const withBase = (p) => {
-  const clean = String(p || "");
-  return clean.startsWith("/") ? `${BASE}${clean.slice(1)}` : `${BASE}${clean}`;
-};
+const BASE_URL = import.meta.env.BASE_URL || "/";
+const withBase = (path) =>
+  (BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL) + path;
 
-// Fallback values (will be replaced in-browser if CAPI_CONFIG.genesisNft exists)
-const FALLBACK = {
-  name: "CAPI Genesis Council",
-  symbol: "CAPI-GEN",
-  maxSupply: 7000,
-  maxPerWallet: 1,
-  minCapiBalance: 150000000,
-  mintClosesUtcIso: "2026-04-17T23:17:00Z",
-  contractAddress: "",
-  metadataPath: "/genesis/metadata/1.json",
-  imagePath: "/genesis/images/genesis.png",
-};
+const METADATA_HUMAN = withBase("/genesis-metadata/");
+const METADATA_JSON = withBase("/genesis/metadata/1.json");
+const IMAGE_URL = withBase("/genesis/images/genesis.png");
 ---
 
 <BaseLayout title={TITLE} description={DESC}>
-  <section class="section" id="genesis">
-    <div class="container reveal reveal--2">
-      <div class="section-block">
-        <h1 style="margin:0 0 10px 0; font-size: clamp(28px, 4vw, 44px);">
-          <span id="genName">{FALLBACK.name}</span>
-          <span class="muted" style="font-size: .6em; font-weight: 600;">NFT Membership</span>
-        </h1>
+  <main class="page">
+    <section class="section">
+      <div class="section-inner">
+        <h1 class="page-title">CAPI Genesis Council NFT Membership</h1>
 
-        <p class="hero__lead" style="max-width: 920px;">
-          Genesis Council is an <b>optional</b> membership layer for identity and community direction.
-          It does <b>not</b> grant financial rights.
-          Official rules and links live here — if it’s not listed on Capitoken.org, assume it’s not official.
+        <p class="page-subtitle">
+          Genesis Council is an <strong>optional membership layer</strong> for
+          identity and community direction. It does <strong>not</strong> grant
+          financial rights. Official rules and links live here — if it’s not
+          listed on capitoken.org, assume it’s not official.
         </p>
 
-        <div class="launch-grid" style="margin-top: 18px;">
-          <div class="launch-row">
-            <div class="card">
-              <div class="card__title">Rules (Fixed)</div>
-              <div class="card__body">
-                <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
-                  <li><b>Max supply:</b> <span id="genMaxSupply">{FALLBACK.maxSupply}</span></li>
-                  <li><b>Max per wallet:</b> <span id="genMaxPerWallet">{FALLBACK.maxPerWallet}</span></li>
-                  <li><b>Eligibility:</b> ≥ <span id="genMinBal">{FALLBACK.minCapiBalance.toLocaleString()}</span> CAPI balance</li>
-                  <li><b>Mint closes:</b> <span id="genCloses">{FALLBACK.mintClosesUtcIso}</span> (same instant as token ownership renounce)</li>
-                </ul>
+        <div class="launch-grid" style="margin-top:16px;">
+          
+          <!-- RULES CARD -->
+          <div class="card">
+            <div class="card-inner">
+              <h2 class="card-title">Rules (Fixed)</h2>
 
-                <p class="small note" style="margin-top: 12px;">
-                  This page is informational. Any “mint now” link must be verified here before you interact.
-                </p>
-              </div>
-              <div class="card__footer">
-                <div class="actions" style="flex-wrap: wrap;">
-                  <a class="btn" href={withBase(FALLBACK.metadataPath)} target="_blank" rel="noreferrer noopener">View Metadata</a>
-                  <a class="btn" href={withBase(FALLBACK.imagePath)} target="_blank" rel="noreferrer noopener">View Image</a>
-                  <a class="btn btn--primary" id="genMintBtn" href="#" aria-disabled="true" style="opacity:.65; pointer-events:none;">Mint (coming soon)</a>
-                </div>
+              <ul style="margin-top:12px; line-height:1.8;">
+                <li><strong>Max supply:</strong> 7000</li>
+                <li><strong>Max per wallet:</strong> 1</li>
+                <li><strong>Eligibility:</strong> ≥ 150,000,000 CAPI balance</li>
+                <li>
+                  <strong>Mint closes:</strong> 2026-04-17T23:17:00Z  
+                  (same instant as token ownership renounce)
+                </li>
+              </ul>
+
+              <p class="muted" style="margin-top:12px;">
+                This page is informational. Any “mint now” link must be verified
+                here before you interact.
+              </p>
+
+              <div class="actions" style="margin-top:16px; gap:10px; flex-wrap:wrap;">
+                <a class="btn btn-secondary" href={METADATA_HUMAN}>
+                  View Metadata
+                </a>
+
+                <a class="btn btn-ghost" href={METADATA_JSON} target="_blank" rel="noopener">
+                  Raw JSON
+                </a>
+
+                <button class="btn btn-primary" disabled>
+                  Mint (coming soon)
+                </button>
               </div>
             </div>
+          </div>
 
-            <div class="card">
-              <div class="card__title">Contract (Official)</div>
-              <div class="card__body">
-                <div class="addr-row">
-                  <span class="mono addr" id="genContractShort">TBA</span>
-                  <div class="addr-actions">
-                    <button class="btn btn--mini btn--primary" id="genCopyContract" type="button" disabled>Copy</button>
-                    <a class="btn btn--mini" id="genViewContract" href="#" target="_blank" rel="noreferrer noopener" style="pointer-events:none; opacity:.6;">Etherscan</a>
-                  </div>
-                </div>
+          <!-- CONTRACT CARD -->
+          <div class="card">
+            <div class="card-inner">
+              <h2 class="card-title">Contract (Official)</h2>
 
-                <p class="small note" style="margin-top:12px;">
-                  The Genesis Council NFT contract will be posted here once deployed and verified.
-                </p>
-
-                <div class="pill" style="margin-top:12px;">
-                  <span class="pill-dot" aria-hidden="true"></span>
-                  <span class="pill-muted">Symbol:</span>
-                  <span class="pill-strong" id="genSymbol">{FALLBACK.symbol}</span>
-                </div>
+              <div class="muted" style="margin-top:10px;">
+                TBA
               </div>
-              <div class="card__footer">
-                <div class="small">
-                  Safety: never trust DMs. Always verify the contract address on this site before interacting.
-                </div>
+
+              <p class="muted" style="margin-top:10px;">
+                The Genesis Council NFT contract will be posted here once
+                deployed and verified.
+              </p>
+
+              <div class="badge" style="margin-top:10px; display:inline-flex;">
+                Symbol: CAPI-GEN
               </div>
+
+              <div style="margin-top:16px;">
+                <img
+                  src={IMAGE_URL}
+                  alt="Genesis Council NFT"
+                  style="width:240px; max-width:100%; border-radius:14px;"
+                  loading="lazy"
+                />
+              </div>
+
+              <p class="muted" style="margin-top:12px;">
+                Safety: never trust DMs. Always verify the contract address on
+                this website before interacting.
+              </p>
             </div>
           </div>
         </div>
 
-        <div class="small" style="margin-top: 16px; opacity: .9;">
-          Tip: If you are building community incentives, link Genesis Council participation to <b>on-chain actions</b> — not promises.
-        </div>
+        <p class="muted" style="margin-top:18px;">
+          Tip: If you are building community incentives, link Genesis Council
+          participation to on-chain actions — not promises.
+        </p>
       </div>
-    </div>
-  </section>
-
-  <script>
-    // Hydrate from public config (if present)
-    (function () {
-      const cfg = window.CAPI_CONFIG && window.CAPI_CONFIG.genesisNft;
-      if (!cfg) return;
-
-      const setText = (id, value) => {
-        const el = document.getElementById(id);
-        if (el && value !== undefined && value !== null && String(value).length) el.textContent = String(value);
-      };
-
-      setText('genName', cfg.name);
-      setText('genSymbol', cfg.symbol);
-      setText('genMaxSupply', cfg.maxSupply);
-      setText('genMaxPerWallet', cfg.maxPerWallet);
-      if (typeof cfg.minCapiBalance === 'number') {
-        setText('genMinBal', cfg.minCapiBalance.toLocaleString());
-      }
-      setText('genCloses', cfg.mintClosesUtcIso);
-
-      // Contract links (only if address exists)
-      const addr = (cfg.contractAddress || '').trim();
-      if (addr) {
-        const short = addr.slice(0, 6) + '…' + addr.slice(-4);
-        setText('genContractShort', short);
-
-        const copyBtn = document.getElementById('genCopyContract');
-        const view = document.getElementById('genViewContract');
-        if (copyBtn) {
-          copyBtn.disabled = false;
-          copyBtn.addEventListener('click', async () => {
-            try { await navigator.clipboard.writeText(addr); } catch {}
-          });
-        }
-        if (view) {
-          view.href = `https://etherscan.io/address/${addr}`;
-          view.style.pointerEvents = 'auto';
-          view.style.opacity = '1';
-        }
-
-        // Mint link (optional): if you later set cfg.mintUrl, enable it
-        const mintBtn = document.getElementById('genMintBtn');
-        if (mintBtn && cfg.mintUrl) {
-          mintBtn.href = String(cfg.mintUrl);
-          mintBtn.style.opacity = '1';
-          mintBtn.style.pointerEvents = 'auto';
-          mintBtn.textContent = 'Mint (official)';
-          mintBtn.setAttribute('aria-disabled', 'false');
-        }
-      }
-    })();
-  </script>
+    </section>
+  </main>
 </BaseLayout>

@@ -1,0 +1,160 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const TITLE = "Genesis Council — NFT Metadata";
+const DESC =
+  "User-friendly view of the Genesis Council NFT metadata. The raw JSON remains available for marketplaces.";
+const BASE_URL = import.meta.env.BASE_URL || "/";
+const withBase = (path: string) =>
+  (BASE_URL.endsWith("/") ? BASE_URL.slice(0, -1) : BASE_URL) + path;
+
+const JSON_URL = withBase("/genesis/metadata/1.json");
+const IMG_FALLBACK = withBase("/genesis/images/genesis.png");
+---
+
+<BaseLayout title={TITLE} description={DESC}>
+  <main class="page">
+    <section class="section">
+      <div class="section-inner">
+        <h1 class="page-title">Genesis Council — Metadata</h1>
+        <p class="page-subtitle">
+          This is a user-friendly view. Marketplaces read the raw JSON. You can
+          still download it below.
+        </p>
+
+        <div class="launch-grid" style="margin-top:16px;">
+          <div class="card">
+            <div class="card-inner">
+              <div class="card-title-row">
+                <h2 class="card-title">NFT Metadata (Human View)</h2>
+                <a class="btn btn-ghost" href={JSON_URL} target="_blank" rel="noopener">
+                  Download JSON
+                </a>
+              </div>
+
+              <div id="metaLoading" class="muted" style="margin-top:10px;">
+                Loading metadata…
+              </div>
+
+              <div id="metaError" class="muted" style="display:none; margin-top:10px;">
+                Could not load metadata. Please try again. If this persists, verify the official domain.
+              </div>
+
+              <div id="metaWrap" style="display:none; margin-top:14px;">
+                <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;">
+                  <div style="width:220px; max-width:100%;">
+                    <img
+                      id="metaImage"
+                      src={IMG_FALLBACK}
+                      alt="Genesis Council NFT"
+                      style="width:220px; max-width:100%; border-radius:14px; display:block;"
+                      loading="lazy"
+                    />
+                  </div>
+
+                  <div style="flex:1; min-width:260px;">
+                    <div class="badge" style="display:inline-flex; margin-bottom:10px;">
+                      Official view
+                    </div>
+
+                    <h3 id="metaName" style="margin:0 0 6px 0;"></h3>
+                    <p id="metaDesc" class="muted" style="margin:0 0 12px 0;"></p>
+
+                    <div class="actions" style="gap:10px; flex-wrap:wrap;">
+                      <a id="metaExternal" class="btn btn-secondary" href="#" target="_blank" rel="noopener" style="display:none;">
+                        Official Page
+                      </a>
+                      <a id="metaRaw" class="btn btn-ghost" href={JSON_URL} target="_blank" rel="noopener">
+                        View Raw JSON
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="margin-top:16px;">
+                  <h3 style="margin:0 0 10px 0;">Attributes</h3>
+                  <div id="metaAttrs" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;"></div>
+                </div>
+
+                <details style="margin-top:14px;">
+                  <summary>Show raw JSON (advanced)</summary>
+                  <pre id="metaPretty" style="white-space:pre-wrap; word-break:break-word; margin-top:10px;"></pre>
+                </details>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <p class="muted" style="margin-top:12px;">
+          Tip: If a link to “Mint now” appears anywhere, verify it first. Official links live only on this site.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (async () => {
+      const jsonUrl = {JSON.stringify(JSON_URL)};
+      const els = {
+        loading: document.getElementById("metaLoading"),
+        error: document.getElementById("metaError"),
+        wrap: document.getElementById("metaWrap"),
+        name: document.getElementById("metaName"),
+        desc: document.getElementById("metaDesc"),
+        img: document.getElementById("metaImage"),
+        attrs: document.getElementById("metaAttrs"),
+        pretty: document.getElementById("metaPretty"),
+        external: document.getElementById("metaExternal"),
+      };
+
+      try {
+        const res = await fetch(jsonUrl, { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const meta = await res.json();
+
+        els.name.textContent = meta?.name || "Genesis Council";
+        els.desc.textContent = meta?.description || "";
+
+        if (meta?.image && typeof meta.image === "string") {
+          els.img.src = meta.image;
+        }
+
+        if (meta?.external_url && typeof meta.external_url === "string") {
+          els.external.href = meta.external_url;
+          els.external.style.display = "inline-flex";
+        }
+
+        els.attrs.innerHTML = "";
+        const attrs = Array.isArray(meta?.attributes) ? meta.attributes : [];
+        if (!attrs.length) {
+          els.attrs.innerHTML = '<div class="muted">No attributes found.</div>';
+        } else {
+          for (const a of attrs) {
+            const k = (a?.trait_type ?? "Trait").toString();
+            const v = (a?.value ?? "").toString();
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML =
+              '<div class="card-inner" style="padding:12px;">' +
+              '<div class="muted" style="font-size:12px; margin-bottom:6px;">' +
+              k +
+              "</div>" +
+              "<div style='font-weight:700;'>" +
+              v +
+              "</div>" +
+              "</div>";
+            els.attrs.appendChild(card);
+          }
+        }
+
+        els.pretty.textContent = JSON.stringify(meta, null, 2);
+
+        els.loading.style.display = "none";
+        els.wrap.style.display = "block";
+      } catch (e) {
+        els.loading.style.display = "none";
+        els.error.style.display = "block";
+      }
+    })();
+  </script>
+</BaseLayout>
