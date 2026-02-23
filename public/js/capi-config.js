@@ -51,6 +51,22 @@
       labelDone: 'RENOUNCED ✅',
     },
 
+    // Genesis Council NFT (Phase: optional community layer)
+    // NOTE: Mint closes permanently at the same instant as token ownership renounce.
+    genesisNft: {
+      enabled: true,
+      name: 'CAPI Genesis Council',
+      symbol: 'CAPI-GEN',
+      maxSupply: 7000,
+      maxPerWallet: 1,
+      minCapiBalance: 150000000, // 150,000,000 CAPI (display value; on-chain checks use 18 decimals)
+      mintClosesUtcIso: '2026-04-17T23:17:00Z',
+      contractAddress: '', // set once deployed
+      metadataUrl: 'https://capitoken.org/genesis/metadata/1.json',
+      imageUrl: 'https://capitoken.org/genesis/images/genesis.png',
+      pagePath: '/genesis/',
+    },
+
     // Optional helper token addresses (mainnet)
     TOKENS: {
       WETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',

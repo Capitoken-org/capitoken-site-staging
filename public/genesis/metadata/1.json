@@ -1,0 +1,14 @@
+{
+  "name": "CAPI Genesis Council",
+  "description": "Genesis Council NFT for Capitoken. Minted before ownership permanently renounces. No financial rights. Community direction only.",
+  "image": "https://capitoken.org/genesis/images/genesis.png",
+  "external_url": "https://capitoken.org/genesis/",
+  "attributes": [
+    { "trait_type": "Role", "value": "Genesis Council" },
+    { "trait_type": "Vote Weight", "value": 1 },
+    { "trait_type": "Max Supply", "value": 7000 },
+    { "trait_type": "Max Per Wallet", "value": 1 },
+    { "trait_type": "Eligibility", "value": ">= 150,000,000 CAPI" },
+    { "trait_type": "Mint Closes", "value": "2026-04-17T23:17:00Z" }
+  ]
+}
