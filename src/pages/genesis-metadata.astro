@@ -1,9 +1,9 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 
-const TITLE = "Genesis Council — NFT Metadata";
+const TITLE = "CAPI Genesis Council — Eligibility Portal";
 const DESC =
-  "User-friendly view of the Genesis Council NFT metadata. The raw JSON remains available for marketplaces.";
+  "Check eligibility on-chain for the Genesis Council NFT (ERC-721). Connect wallet to see your CAPI balance and remaining requirement.";
 
 const BASE = import.meta.env.BASE_URL || "/";
 const withBase = (p) => {
@@ -11,8 +11,10 @@ const withBase = (p) => {
   return clean.startsWith("/") ? `${BASE}${clean.slice(1)}` : `${BASE}${clean}`;
 };
 
-const JSON_URL = withBase("/genesis/metadata/1.json");
-const IMG_FALLBACK = withBase("/genesis/images/genesis.png");
+const METADATA_HUMAN = withBase("/genesis-metadata/");
+const METADATA_JSON = withBase("/genesis/metadata/1.json");
+const IMAGE_URL = withBase("/genesis/images/genesis.png");
+const GENESIS_JS = withBase("/js/genesis-check.js");
 ---
 
 <BaseLayout title={TITLE} description={DESC}>
@@ -20,139 +22,128 @@ const IMG_FALLBACK = withBase("/genesis/images/genesis.png");
     <section class="hero">
       <div class="pill">
         <span class="pill__dot"></span>
-        <span class="iconwrap">
-          <img class="icon icon--sm icon-neutral" src={withBase("/icons/info.svg")} alt="" />
-          <span>Genesis Metadata</span>
-        </span>
+        <span class="mono">Genesis Council</span>
       </div>
 
-      <h1>Genesis Council — Metadata</h1>
+      <h1>CAPI Genesis Council</h1>
 
       <p class="hero__lead">
-        This is a user-friendly view. Marketplaces read the raw JSON. You can still download it below.
+        Connect your wallet to check eligibility <strong>on-chain</strong>.
+        This NFT is an <strong>optional membership layer</strong> for identity and community direction.
+        It does <strong>not</strong> grant financial rights. If it’s not listed on capitoken.org, assume it’s not official.
       </p>
 
       <div class="actions" style="margin-top:12px; gap:10px; flex-wrap:wrap;">
-        <a class="btn btn--primary" href={JSON_URL} target="_blank" rel="noopener">Download JSON</a>
-        <a class="btn" href={withBase("/genesis/")} >Back to Genesis</a>
+        <button id="gcConnectBtn" class="btn btn--primary" type="button">Connect Wallet</button>
+        <button id="gcRefreshBtn" class="btn" type="button" disabled>Refresh</button>
+        <a class="btn" href={METADATA_HUMAN}>View Metadata</a>
+        <a class="btn" href={METADATA_JSON} target="_blank" rel="noopener">Raw JSON</a>
+      </div>
+
+      <div id="gcWalletRow" class="small" style="margin-top:10px; display:none;">
+        Wallet: <span id="gcWallet" class="mono"></span>
+        <span id="gcNet" class="pill" style="margin-left:10px; display:inline-flex;">
+          <span class="pill__dot"></span>
+          <span class="mono" id="gcNetText">Network</span>
+        </span>
+      </div>
+
+      <div id="gcCountdown" class="small" style="margin-top:8px;">
+        Mint closes in: <span class="mono" id="gcCountdownText">—</span>
+        <span class="small" style="display:block; margin-top:4px;">
+          Close time (UTC): <span class="mono" id="gcCloseUtc">—</span>
+        </span>
       </div>
     </section>
 
     <section class="section">
-      <div class="card">
-        <div id="metaLoading" class="small">Loading metadata…</div>
-        <div id="metaError" class="small" style="display:none;">
-          Could not load metadata. Please try again. If this persists, verify the official domain.
+      <div class="grid">
+        <!-- ELIGIBILITY -->
+        <div class="card col-6">
+          <h3 style="margin:0 0 8px 0;">Eligibility (On-chain)</h3>
+
+          <div class="kv">
+            <strong>Required</strong>
+            <span class="mono" id="gcRequired">≥ 150,000,000 CAPI</span>
+          </div>
+
+          <div class="kv">
+            <strong>Your balance</strong>
+            <span class="mono" id="gcBalance">—</span>
+          </div>
+
+          <div class="kv">
+            <strong>Short by</strong>
+            <span class="mono" id="gcShortBy">—</span>
+          </div>
+
+          <div id="gcStatusWrap" style="margin-top:12px;">
+            <div class="pill" id="gcStatusPill" style="display:inline-flex;">
+              <span class="pill__dot"></span>
+              <span class="mono" id="gcStatusText">Connect wallet to check eligibility.</span>
+            </div>
+          </div>
+
+          <p class="small" style="margin-top:12px;">
+            Tip: eligibility is read directly from the official ERC-20 contract via <span class="mono">eth_call</span>.
+            Never trust screenshots or DMs.
+          </p>
+
+          <div class="actions" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
+            <a class="btn" href={withBase("/#launch-panel")}>Go to Launch Panel</a>
+            <a class="btn" href={withBase("/verify/")}>Verify Official Links</a>
+          </div>
         </div>
 
-        <div id="metaWrap" style="display:none;">
-          <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;">
-            <div style="width:240px; max-width:100%;">
-              <img
-                id="metaImage"
-                src={IMG_FALLBACK}
-                alt="Genesis Council NFT"
-                style="width:240px; max-width:100%; border-radius:14px; border:1px solid rgba(255,255,255,0.10);"
-                loading="lazy"
-              />
-            </div>
+        <!-- MINT / CONTRACT -->
+        <div class="card col-6">
+          <h3 style="margin:0 0 8px 0;">Mint (ERC-721)</h3>
 
-            <div style="flex:1; min-width:260px;">
-              <h2 id="metaName" style="margin:0 0 6px 0;"></h2>
-              <p id="metaDesc" class="small" style="margin:0 0 12px 0;"></p>
-
-              <div class="actions" style="gap:10px; flex-wrap:wrap;">
-                <a id="metaExternal" class="btn btn--primary" href="#" target="_blank" rel="noopener" style="display:none;">
-                  Official Page
-                </a>
-                <a class="btn" href={JSON_URL} target="_blank" rel="noopener">View Raw JSON</a>
-              </div>
-            </div>
+          <div class="kv">
+            <strong>Max supply</strong>
+            <span class="mono">7000</span>
           </div>
 
-          <div style="margin-top:16px;">
-            <h3 style="margin:0 0 10px 0;">Attributes</h3>
-            <div
-              id="metaAttrs"
-              style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;"
-            ></div>
+          <div class="kv">
+            <strong>Max per wallet</strong>
+            <span class="mono">1</span>
           </div>
 
-          <details style="margin-top:14px;">
-            <summary>Show raw JSON (advanced)</summary>
-            <pre id="metaPretty" style="white-space:pre-wrap; word-break:break-word; margin-top:10px;"></pre>
-          </details>
+          <div class="kv">
+            <strong>Contract</strong>
+            <span class="mono" id="gcNftAddr">TBA</span>
+          </div>
+
+          <p class="small" style="margin-top:10px;">
+            Mint is <strong>free</strong> (gas only). The official contract address will be posted here once deployed and verified.
+          </p>
+
+          <div class="actions" style="margin-top:12px; gap:10px; flex-wrap:wrap;">
+            <button id="gcMintBtn" class="btn btn--primary" type="button" disabled>Mint (coming soon)</button>
+            <span class="small" id="gcMintHint">Connect wallet to check eligibility.</span>
+          </div>
+
+          <div style="margin-top:14px;">
+            <img
+              src={IMAGE_URL}
+              alt="Genesis Council NFT"
+              style="width:260px; max-width:100%; border-radius:14px; border:1px solid rgba(255,255,255,0.10);"
+              loading="lazy"
+            />
+          </div>
+
+          <p class="small" style="margin-top:12px;">
+            Safety: never trust DMs. Always verify the contract address on this website before interacting.
+          </p>
         </div>
       </div>
 
       <p class="small" style="margin-top:14px;">
-        Tip: If a link to “Mint now” appears anywhere, verify it first. Official links live only on this site.
+        This portal is designed to drive on-chain participation through transparent rules — not promises.
       </p>
     </section>
   </main>
 
-  <script>
-    (async () => {
-      const jsonUrl = {JSON.stringify(JSON_URL)};
-      const els = {
-        loading: document.getElementById("metaLoading"),
-        error: document.getElementById("metaError"),
-        wrap: document.getElementById("metaWrap"),
-        name: document.getElementById("metaName"),
-        desc: document.getElementById("metaDesc"),
-        img: document.getElementById("metaImage"),
-        attrs: document.getElementById("metaAttrs"),
-        pretty: document.getElementById("metaPretty"),
-        external: document.getElementById("metaExternal"),
-      };
-
-      try {
-        const res = await fetch(jsonUrl, { cache: "no-store" });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const meta = await res.json();
-
-        els.name.textContent = meta?.name || "Genesis Council";
-        els.desc.textContent = meta?.description || "";
-
-        if (meta?.image && typeof meta.image === "string") {
-          els.img.src = meta.image;
-        }
-
-        if (meta?.external_url && typeof meta.external_url === "string") {
-          els.external.href = meta.external_url;
-          els.external.style.display = "inline-flex";
-        }
-
-        els.attrs.innerHTML = "";
-        const attrs = Array.isArray(meta?.attributes) ? meta.attributes : [];
-        if (!attrs.length) {
-          els.attrs.innerHTML = '<div class="small">No attributes found.</div>';
-        } else {
-          for (const a of attrs) {
-            const k = (a?.trait_type ?? "Trait").toString();
-            const v = (a?.value ?? "").toString();
-            const card = document.createElement("div");
-            card.className = "card";
-            card.style.padding = "12px";
-            card.innerHTML =
-              '<div class="small" style="margin-bottom:6px;">' +
-              k +
-              "</div>" +
-              "<div style='font-weight:800;'>" +
-              v +
-              "</div>";
-            els.attrs.appendChild(card);
-          }
-        }
-
-        els.pretty.textContent = JSON.stringify(meta, null, 2);
-
-        els.loading.style.display = "none";
-        els.wrap.style.display = "block";
-      } catch (e) {
-        els.loading.style.display = "none";
-        els.error.style.display = "block";
-      }
-    })();
-  </script>
+  <!-- Genesis eligibility logic (no external libs) -->
+  <script src={GENESIS_JS} defer></script>
 </BaseLayout>

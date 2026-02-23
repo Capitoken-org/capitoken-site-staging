@@ -50,6 +50,23 @@
       label: 'RENOUNCE IN:',
       labelDone: 'RENOUNCED ✅',
     },
+    // Genesis Council (ERC-721) — dynamic eligibility portal
+    genesisNft: {
+      enabled: true,
+      standard: 'ERC-721',
+      maxSupply: 7000,
+      maxPerWallet: 1,
+      minCapiBalance: 150000000, // whole CAPI tokens (decimals handled in JS)
+      mintClosesUtcIso: '2026-04-17T23:17:00Z',
+
+      // Links (kept relative for staging + production compatibility)
+      humanMetadataPath: '/genesis-metadata/',
+      metadataJsonPath: '/genesis/metadata/1.json',
+      imagePath: '/genesis/images/genesis.png',
+
+      // Set after NFT deployment (keep empty until then)
+      nftContractAddress: '',
+    },
 
     // Genesis Council NFT (Phase: optional community layer)
     // NOTE: Mint closes permanently at the same instant as token ownership renounce.
