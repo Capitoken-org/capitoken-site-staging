@@ -3,7 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 const TITLE = "Genesis Council — Marketplace Metadata";
 const DESC =
-  "User-friendly view of the Genesis Council NFT metadata. The raw JSON remains available for marketplaces.";
+  "User-friendly view of the Genesis Council NFT metadata. Raw JSON remains available for marketplaces.";
 
 const BASE = import.meta.env.BASE_URL || "/";
 const withBase = (p) => {
@@ -16,7 +16,7 @@ const IMG_FALLBACK = withBase("/genesis/images/genesis.png");
 ---
 
 <BaseLayout title={TITLE} description={DESC}>
-  <main class="container">
+  <main class="container" data-json-url={JSON_URL} data-img-fallback={IMG_FALLBACK}>
     <section class="hero">
       <div class="pill">
         <span class="pill__dot"></span>
@@ -30,7 +30,7 @@ const IMG_FALLBACK = withBase("/genesis/images/genesis.png");
       </p>
 
       <div class="actions" style="margin-top:12px; gap:10px; flex-wrap:wrap;">
-        <a class="btn btn--primary" href={JSON_URL} target="_blank" rel="noopener">Download JSON</a>
+        <a class="btn btn--primary" href={JSON_URL} target="_blank" rel="noopener">Open Raw JSON</a>
         <a class="btn" href={withBase("/genesis/")}>Back to Eligibility</a>
       </div>
     </section>
@@ -74,7 +74,10 @@ const IMG_FALLBACK = withBase("/genesis/images/genesis.png");
 
           <div style="margin-top:16px;">
             <h3 style="margin:0 0 10px 0;">Attributes</h3>
-            <div id="metaAttrs" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;"></div>
+            <div
+              id="metaAttrs"
+              style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;"
+            ></div>
           </div>
 
           <details style="margin-top:14px;">
@@ -88,7 +91,10 @@ const IMG_FALLBACK = withBase("/genesis/images/genesis.png");
 
   <script>
     (async () => {
-      const jsonUrl = {JSON.stringify(JSON_URL)};
+      const root = document.querySelector("main.container");
+      const jsonUrl = root?.dataset?.jsonUrl;
+      const imgFallback = root?.dataset?.imgFallback;
+
       const els = {
         loading: document.getElementById("metaLoading"),
         error: document.getElementById("metaError"),
@@ -109,6 +115,7 @@ const IMG_FALLBACK = withBase("/genesis/images/genesis.png");
         els.name.textContent = meta?.name || "Genesis Council";
         els.desc.textContent = meta?.description || "";
         if (meta?.image && typeof meta.image === "string") els.img.src = meta.image;
+        else if (imgFallback) els.img.src = imgFallback;
 
         if (meta?.external_url && typeof meta.external_url === "string") {
           els.external.href = meta.external_url;

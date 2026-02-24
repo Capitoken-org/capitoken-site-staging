@@ -91,7 +91,6 @@
   }
 
   async function switchToEthereumMainnet() {
-    // tries to switch; if not added, wallet may need addEthereumChain, but Mainnet usually exists.
     return await window.ethereum.request({
       method: "wallet_switchEthereumChain",
       params: [{ chainId: ETH_MAINNET_CHAIN_ID }],
@@ -107,12 +106,7 @@
 
   async function ethCallViaRpcHttp(to, data) {
     if (!RPC_HTTP) throw new Error("RPC_HTTP not configured");
-    const body = {
-      jsonrpc: "2.0",
-      id: 1,
-      method: "eth_call",
-      params: [{ to, data }, "latest"],
-    };
+    const body = { jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to, data }, "latest"] };
     const res = await fetch(RPC_HTTP, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -181,7 +175,6 @@
       els.mintHint.textContent = "Eligible ✅ Mint opens when the official NFT contract is deployed.";
       return;
     }
-    // Future: enable mint tx when contract exists.
     els.mintBtn.disabled = true;
     els.mintBtn.textContent = "Mint (coming soon)";
     els.mintHint.textContent = "Eligible ✅ Mint UI will activate here after contract deployment.";
@@ -190,6 +183,12 @@
   async function refreshStatus(wallet) {
     setRequiredText();
     setNftAddr();
+
+    if (!TOKEN_ADDR || !/^0x[a-fA-F0-9]{40}$/.test(TOKEN_ADDR)) {
+      setStatus("Config error: token contract address is missing/invalid.");
+      setMintState({ connected: true, eligible: false });
+      return;
+    }
 
     if (!wallet || !/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
       if (els.balance) els.balance.textContent = "—";
@@ -206,7 +205,6 @@
     if (els.walletRow) els.walletRow.style.display = "";
     if (els.refreshBtn) els.refreshBtn.disabled = false;
 
-    // Network detection
     let chainId = "unknown";
     try {
       chainId = await getChainId();
@@ -221,20 +219,25 @@
         : "";
     }
 
-    // Read balanceOf via wallet first; fallback to RPC_HTTP if wallet call fails or wrong network
     const data = encodeBalanceOf(wallet);
 
     let hex = null;
+    let used = "";
+
+    // 1) Try wallet
     try {
-      // wallet call may fail if wrong network, but try anyway
       hex = await ethCallViaWallet(TOKEN_ADDR, data);
+      used = "wallet";
     } catch (_) {}
 
+    // 2) Fallback RPC
     if (!hex) {
       try {
         hex = await ethCallViaRpcHttp(TOKEN_ADDR, data);
+        used = "rpc";
       } catch (e) {
-        setStatus("Could not read on-chain balance. Check wallet/network and try again.");
+        const extra = !RPC_HTTP ? " RPC_HTTP is empty." : " RPC_HTTP request failed (possible CORS/origin block).";
+        setStatus("Could not read on-chain balance. Check wallet/network and try again." + extra);
         setMintState({ connected: true, eligible: false });
         return;
       }
@@ -248,12 +251,10 @@
     const shortWei = reqWei > balWei ? reqWei - balWei : 0n;
     const eligible = balWei >= reqWei;
 
-    if (els.shortBy) {
-      els.shortBy.textContent = eligible ? "0 CAPI" : `${formatUnits(shortWei, DECIMALS)} CAPI`;
-    }
+    if (els.shortBy) els.shortBy.textContent = eligible ? "0 CAPI" : `${formatUnits(shortWei, DECIMALS)} CAPI`;
 
-    if (eligible) setStatus("Eligible ✅ You can mint once the official contract is live.");
-    else setStatus("Not eligible yet ❌ Increase your CAPI balance to qualify.");
+    if (eligible) setStatus(`Eligible ✅ (read via ${used})`);
+    else setStatus(`Not eligible yet ❌ (read via ${used})`);
 
     setMintState({ connected: true, eligible });
   }
@@ -270,7 +271,6 @@
       return;
     }
 
-    // pre-check existing connection
     let accounts = [];
     try {
       accounts = await getAccounts();

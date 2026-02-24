@@ -16,7 +16,7 @@
     CHAIN_ID_HEX: '0x1',
 
     // ✅ Put your Alchemy HTTP URL here (client-side key)
-    RPC_HTTP: 'https://eth-mainnet.g.alchemy.com/v2/QCaK5sYswRrOUNUTruubE',
+    RPC_HTTP: 'https://cloudflare-eth.com',
 
     // Verified token contract (mainnet)
     CONTRACT_ADDRESS: '0xF2dA6C9B945c688A52D3B72340E622014920de6a',
