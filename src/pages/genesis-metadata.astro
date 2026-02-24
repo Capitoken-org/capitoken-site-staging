@@ -1,156 +1,31 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 
-const TITLE = "Genesis Council — Marketplace Metadata";
-const DESC =
-  "User-friendly view of the Genesis Council NFT metadata. Raw JSON remains available for marketplaces.";
-
 const BASE = import.meta.env.BASE_URL || "/";
 const withBase = (p) => {
   const clean = String(p || "");
   return clean.startsWith("/") ? `${BASE}${clean.slice(1)}` : `${BASE}${clean}`;
 };
-
-const JSON_URL = withBase("/genesis/metadata/1.json");
-const IMG_FALLBACK = withBase("/genesis/images/genesis.png");
 ---
 
-<BaseLayout title={TITLE} description={DESC}>
-  <main class="container" data-json-url={JSON_URL} data-img-fallback={IMG_FALLBACK}>
+<BaseLayout title="Genesis Metadata | Capitoken" description="Genesis Council metadata preview (redirect).">
+  <main class="container">
     <section class="hero">
-      <div class="pill">
-        <span class="pill__dot"></span>
-        <span class="mono">Marketplace Metadata</span>
-      </div>
-
-      <h1>Genesis Council — Metadata</h1>
-
+      <div class="pill"><span class="pill__dot"></span><span>Genesis Council</span></div>
+      <h1>Metadata moved</h1>
       <p class="hero__lead">
-        Marketplaces read raw JSON. This page makes it readable for humans.
+        The user-friendly metadata view now lives inside <a href={withBase("/genesis")}>/genesis</a> as a modal.
       </p>
-
-      <div class="actions" style="margin-top:12px; gap:10px; flex-wrap:wrap;">
-        <a class="btn btn--primary" href={JSON_URL} target="_blank" rel="noopener">Open Raw JSON</a>
-        <a class="btn" href={withBase("/genesis/")}>Back to Eligibility</a>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="card">
-        <div class="kv">
-          <strong>Source</strong>
-          <span class="mono">{JSON_URL}</span>
-        </div>
-
-        <div id="metaLoading" class="small" style="margin-top:12px;">Loading…</div>
-        <div id="metaError" class="small" style="display:none; margin-top:12px;">
-          Could not load metadata. Verify official domain and try again.
-        </div>
-
-        <div id="metaWrap" style="display:none; margin-top:14px;">
-          <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start;">
-            <div style="width:260px; max-width:100%;">
-              <img
-                id="metaImage"
-                src={IMG_FALLBACK}
-                alt="Genesis Council NFT"
-                style="width:260px; max-width:100%; border-radius:14px; border:1px solid rgba(255,255,255,0.10);"
-                loading="lazy"
-              />
-            </div>
-
-            <div style="flex:1; min-width:280px;">
-              <h2 id="metaName" style="margin:0 0 6px 0;"></h2>
-              <p id="metaDesc" class="small" style="margin:0 0 12px 0;"></p>
-
-              <div class="actions" style="gap:10px; flex-wrap:wrap;">
-                <a id="metaExternal" class="btn btn--primary" href="#" target="_blank" rel="noopener" style="display:none;">
-                  External URL
-                </a>
-                <a class="btn" href={JSON_URL} target="_blank" rel="noopener">View Raw JSON</a>
-              </div>
-            </div>
-          </div>
-
-          <div style="margin-top:16px;">
-            <h3 style="margin:0 0 10px 0;">Attributes</h3>
-            <div
-              id="metaAttrs"
-              style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px;"
-            ></div>
-          </div>
-
-          <details style="margin-top:14px;">
-            <summary>Show raw JSON (advanced)</summary>
-            <pre id="metaPretty" style="white-space:pre-wrap; word-break:break-word; margin-top:10px;"></pre>
-          </details>
-        </div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+        <a class="btn btn--primary" href={withBase("/genesis")}>Go to Genesis Council</a>
+        <a class="btn" href={withBase("/genesis/metadata/1.json")} target="_blank" rel="noreferrer">Open Raw JSON</a>
       </div>
     </section>
   </main>
 
-  <script>
-    (async () => {
-      const root = document.querySelector("main.container");
-      const jsonUrl = root?.dataset?.jsonUrl;
-      const imgFallback = root?.dataset?.imgFallback;
-
-      const els = {
-        loading: document.getElementById("metaLoading"),
-        error: document.getElementById("metaError"),
-        wrap: document.getElementById("metaWrap"),
-        name: document.getElementById("metaName"),
-        desc: document.getElementById("metaDesc"),
-        img: document.getElementById("metaImage"),
-        attrs: document.getElementById("metaAttrs"),
-        pretty: document.getElementById("metaPretty"),
-        external: document.getElementById("metaExternal"),
-      };
-
-      try {
-        const res = await fetch(jsonUrl, { cache: "no-store" });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const meta = await res.json();
-
-        els.name.textContent = meta?.name || "Genesis Council";
-        els.desc.textContent = meta?.description || "";
-        if (meta?.image && typeof meta.image === "string") els.img.src = meta.image;
-        else if (imgFallback) els.img.src = imgFallback;
-
-        if (meta?.external_url && typeof meta.external_url === "string") {
-          els.external.href = meta.external_url;
-          els.external.style.display = "inline-flex";
-        }
-
-        els.attrs.innerHTML = "";
-        const attrs = Array.isArray(meta?.attributes) ? meta.attributes : [];
-        if (!attrs.length) {
-          els.attrs.innerHTML = '<div class="small">No attributes found.</div>';
-        } else {
-          for (const a of attrs) {
-            const k = (a?.trait_type ?? "Trait").toString();
-            const v = (a?.value ?? "").toString();
-            const card = document.createElement("div");
-            card.className = "card";
-            card.style.padding = "12px";
-            card.innerHTML =
-              '<div class="small" style="margin-bottom:6px;">' +
-              k +
-              "</div>" +
-              "<div style='font-weight:800;'>" +
-              v +
-              "</div>";
-            els.attrs.appendChild(card);
-          }
-        }
-
-        els.pretty.textContent = JSON.stringify(meta, null, 2);
-        els.loading.style.display = "none";
-        els.wrap.style.display = "block";
-      } catch (e) {
-        els.loading.style.display = "none";
-        els.error.style.display = "block";
-      }
-    })();
+  <script is:inline>
+    // Soft-redirect so old shared links never break.
+    // (Keeps SEO + prevents confusion if someone saved /genesis-metadata)
+    setTimeout(() => { window.location.href = "{withBase('/genesis')}"; }, 700);
   </script>
 </BaseLayout>

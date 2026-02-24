@@ -1,153 +1,396 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 
-const TITLE = "CAPI Genesis Council — Eligibility Portal";
-const DESC =
-  "Connect wallet to check Genesis Council eligibility on-chain. Shows your CAPI balance, how much you’re missing, and mint status.";
-
 const BASE = import.meta.env.BASE_URL || "/";
 const withBase = (p) => {
   const clean = String(p || "");
   return clean.startsWith("/") ? `${BASE}${clean.slice(1)}` : `${BASE}${clean}`;
 };
-
-const METADATA_HUMAN = withBase("/genesis-metadata/");
-const METADATA_JSON = withBase("/genesis/metadata/1.json");
-const IMAGE_URL = withBase("/genesis/images/genesis.png");
-const GENESIS_JS = withBase("/js/genesis-check.js");
 ---
 
-<BaseLayout title={TITLE} description={DESC}>
+<BaseLayout
+  title="CAPI Genesis Council | Capitoken"
+  description="CAPI Genesis Council eligibility portal — connect wallet to verify CAPI balance and claim status."
+>
   <main class="container">
     <section class="hero">
-      <div class="pill">
-        <span class="pill__dot"></span>
-        <span class="mono">Genesis Council</span>
-      </div>
-
+      <div class="pill"><span class="pill__dot"></span><span>Genesis Council</span></div>
       <h1>CAPI Genesis Council</h1>
-
       <p class="hero__lead">
-        This page is an <strong>on-chain eligibility portal</strong>. Connect your wallet to see your exact CAPI balance and how much you’re missing.
-        This NFT is an <strong>optional membership layer</strong> for identity and community direction. It does <strong>not</strong> grant financial rights.
-        If it’s not listed on capitoken.org, assume it’s not official.
+        This page is an <strong>on-chain</strong> eligibility portal. Connect your wallet to see your exact CAPI balance
+        and how much you're missing. This NFT is an optional membership layer for identity and community direction.
+        It does not grant financial rights. If it's not listed on capitoken.org, assume it's not official.
       </p>
 
-      <div class="actions" style="margin-top:12px; gap:10px; flex-wrap:wrap;">
-        <button id="gcConnectBtn" class="btn btn--primary" type="button">Connect Wallet</button>
-        <button id="gcRefreshBtn" class="btn" type="button" disabled>Refresh</button>
-        <button id="gcSwitchBtn" class="btn" type="button" style="display:none;">Switch to Ethereum</button>
+      <div class="gc-actions">
+        <button id="gcConnectBtn" class="btn btn--primary">Connect Wallet</button>
+        <button id="gcRefreshBtn" class="btn" disabled>Refresh</button>
 
-        <a class="btn" href={METADATA_HUMAN}>Marketplace Metadata</a>
-        <a class="btn" href={METADATA_JSON} target="_blank" rel="noopener">Raw JSON</a>
+        <!-- Replaces the old /genesis-metadata page (no more duplicate UI) -->
+        <button id="gcMetaBtn" class="btn">View Metadata</button>
+
+        <a class="btn" id="gcRawJsonLink" href={withBase("/genesis/metadata/1.json")} target="_blank" rel="noreferrer">Raw JSON</a>
+
+        <button id="gcSwitchBtn" class="btn" style="display:none;">Switch to Ethereum</button>
       </div>
 
-      <div id="gcWalletRow" class="small" style="margin-top:10px; display:none;">
-        Wallet: <span id="gcWallet" class="mono"></span>
+      <div class="gc-meta">
+        <div id="gcWalletRow" class="gc-meta__row" style="display:none;">
+          <div class="gc-meta__item">
+            <span class="gc-meta__label">Wallet:</span>
+            <span id="gcWallet" class="mono">—</span>
+          </div>
 
-        <span id="gcNet" class="pill" style="margin-left:10px; display:inline-flex;">
-          <span class="pill__dot"></span>
-          <span class="mono" id="gcNetText">Network</span>
-        </span>
+          <div class="gc-meta__item">
+            <span class="gc-meta__label">Network:</span>
+            <span id="gcNetText" class="badge">—</span>
+          </div>
 
-        <span id="gcNetHint" class="small" style="display:block; margin-top:6px;"></span>
-      </div>
+          <div id="gcNetHint" class="gc-meta__hint"></div>
+        </div>
 
-      <div id="gcCountdown" class="small" style="margin-top:8px;">
-        Mint closes in: <span class="mono" id="gcCountdownText">—</span>
-        <span class="small" style="display:block; margin-top:4px;">
-          Close time (UTC): <span class="mono" id="gcCloseUtc">—</span>
-        </span>
+        <div class="gc-meta__row">
+          <div class="gc-meta__item">
+            <span class="gc-meta__label">Mint closes in:</span>
+            <span id="gcCountdownText" class="mono">—</span>
+          </div>
+          <div class="gc-meta__item">
+            <span class="gc-meta__label">Close time (UTC):</span>
+            <span id="gcCloseUtc" class="mono">—</span>
+          </div>
+        </div>
       </div>
     </section>
 
     <section class="section">
-      <div class="grid">
-        <!-- ELIGIBILITY -->
-        <div class="card col-6">
-          <h3 style="margin:0 0 8px 0;">Eligibility (On-chain)</h3>
+      <div class="grid grid--2">
+        <!-- Eligibility -->
+        <div class="card">
+          <div class="card__title">Eligibility (On-chain)</div>
 
           <div class="kv">
-            <strong>Required</strong>
-            <span class="mono" id="gcRequired">—</span>
-          </div>
-
-          <div class="kv">
-            <strong>Your balance</strong>
-            <span class="mono" id="gcBalance">—</span>
-          </div>
-
-          <div class="kv">
-            <strong>Short by</strong>
-            <span class="mono" id="gcShortBy">—</span>
-          </div>
-
-          <div id="gcStatusWrap" style="margin-top:12px;">
-            <div class="pill" id="gcStatusPill" style="display:inline-flex;">
-              <span class="pill__dot"></span>
-              <span class="mono" id="gcStatusText">Connect wallet to check eligibility.</span>
+            <div class="kv__row">
+              <strong>Required</strong>
+              <span id="gcRequired" class="mono">—</span>
+            </div>
+            <div class="kv__row">
+              <strong>Your balance</strong>
+              <span id="gcBalance" class="mono">—</span>
+            </div>
+            <div class="kv__row">
+              <strong>Short by</strong>
+              <span id="gcShortBy" class="mono">—</span>
             </div>
           </div>
 
-          <p class="small" style="margin-top:12px;">
-            Balance is read directly from the official CAPI contract. If your wallet is on the wrong network, we’ll ask you to switch —
-            and we also use a safe read-only RPC fallback for reliability.
-          </p>
+          <div class="gc-status">
+            <span class="badge" id="gcStatusText">Connect wallet to check eligibility.</span>
+          </div>
 
-          <div class="actions" style="margin-top:14px; gap:10px; flex-wrap:wrap;">
-            <a class="btn" href={withBase("/#launch-panel")}>Go to Launch Panel</a>
-            <a class="btn" href={withBase("/verify/")}>Verify Official Links</a>
+          <div class="gc-note">
+            Balance is read directly from the official CAPI contract. If your wallet is on the wrong network, we’ll ask
+            you to switch — and we also use a safe read-only RPC fallback for reliability.
+          </div>
+
+          <div class="gc-cta">
+            <a class="btn" href={withBase("/#launch")}>Go to Launch Panel</a>
+            <a class="btn" href={withBase("/verify")}>Verify Official Links</a>
           </div>
         </div>
 
-        <!-- MINT / CONTRACT -->
-        <div class="card col-6">
-          <h3 style="margin:0 0 8px 0;">Mint (ERC-721)</h3>
+        <!-- Mint -->
+        <div class="card">
+          <div class="card__title">Mint (ERC-721)</div>
 
           <div class="kv">
-            <strong>Max supply</strong>
-            <span class="mono">7000</span>
+            <div class="kv__row">
+              <strong>Max supply</strong>
+              <span class="mono">7000</span>
+            </div>
+            <div class="kv__row">
+              <strong>Max per wallet</strong>
+              <span class="mono">1</span>
+            </div>
+            <div class="kv__row">
+              <strong>Contract</strong>
+              <span id="gcNftAddr" class="mono">TBA</span>
+            </div>
           </div>
 
-          <div class="kv">
-            <strong>Max per wallet</strong>
-            <span class="mono">1</span>
+          <div class="gc-note">
+            Mint is free (gas only). The official contract address will be posted here once deployed and verified.
           </div>
 
-          <div class="kv">
-            <strong>Contract</strong>
-            <span class="mono" id="gcNftAddr">TBA</span>
+          <div class="gc-mintrow">
+            <button id="gcMintBtn" class="btn btn--primary" disabled>Mint (coming soon)</button>
+            <div id="gcMintHint" class="gc-mintHint">Connect wallet to check eligibility.</div>
           </div>
 
-          <p class="small" style="margin-top:10px;">
-            Mint is <strong>free</strong> (gas only). The official contract address will be posted here once deployed and verified.
-          </p>
-
-          <div class="actions" style="margin-top:12px; gap:10px; flex-wrap:wrap;">
-            <button id="gcMintBtn" class="btn btn--primary" type="button" disabled>Mint (coming soon)</button>
-            <span class="small" id="gcMintHint">Connect wallet to check eligibility.</span>
+          <div class="gc-nft">
+            <img id="gcNftImage" src={withBase("/genesis/images/genesis.png")} alt="Genesis Council NFT preview" loading="lazy" />
+            <div class="gc-note small">Safety: never trust DMs. Always verify the contract address on this website before interacting.</div>
           </div>
-
-          <div style="margin-top:14px;">
-            <img
-              src={IMAGE_URL}
-              alt="Genesis Council NFT"
-              style="width:260px; max-width:100%; border-radius:14px; border:1px solid rgba(255,255,255,0.10);"
-              loading="lazy"
-            />
-          </div>
-
-          <p class="small" style="margin-top:12px;">
-            Safety: never trust DMs. Always verify the contract address on this website before interacting.
-          </p>
         </div>
       </div>
-
-      <p class="small" style="margin-top:14px;">
-        This portal is designed to drive on-chain participation through transparent rules — not promises.
-      </p>
     </section>
+
+    <div class="gc-footnote">
+      This portal is designed to drive on-chain participation through transparent rules — not promises.
+    </div>
+
+    <!-- Metadata Modal (User-friendly) -->
+    <div id="gcMetaModal" class="gc-modal" aria-hidden="true">
+      <div class="gc-modal__backdrop" data-close="1"></div>
+      <div class="gc-modal__panel" role="dialog" aria-modal="true" aria-labelledby="gcMetaTitle">
+        <div class="gc-modal__top">
+          <div>
+            <div class="pill"><span class="pill__dot"></span><span>Metadata</span></div>
+            <h2 id="gcMetaTitle" class="gc-modal__title">Genesis Council Metadata</h2>
+            <p class="gc-modal__sub">Friendly preview for non-technical users. Raw JSON is still available.</p>
+          </div>
+          <button id="gcMetaClose" class="gc-modal__close" aria-label="Close">✕</button>
+        </div>
+
+        <div class="gc-modal__body">
+          <div class="gc-modal__grid">
+            <div class="gc-modal__media">
+              <img id="gcMetaImage" src={withBase("/genesis/images/genesis.png")} alt="Genesis Council image" loading="lazy" />
+            </div>
+
+            <div class="gc-modal__info">
+              <div class="kv">
+                <div class="kv__row">
+                  <strong>Name</strong>
+                  <span id="gcMetaName" class="mono">—</span>
+                </div>
+                <div class="kv__row">
+                  <strong>Description</strong>
+                  <span id="gcMetaDesc">—</span>
+                </div>
+                <div class="kv__row">
+                  <strong>External URL</strong>
+                  <span><a id="gcMetaExternal" href="#" target="_blank" rel="noreferrer">—</a></span>
+                </div>
+              </div>
+
+              <div class="gc-attrs">
+                <div class="gc-attrs__title">Attributes</div>
+                <div id="gcMetaAttrs" class="gc-attrs__list">
+                  <div class="gc-attrs__empty">—</div>
+                </div>
+              </div>
+
+              <div class="gc-modal__actions">
+                <a class="btn" id="gcMetaRawBtn" href={withBase("/genesis/metadata/1.json")} target="_blank" rel="noreferrer">Open Raw JSON</a>
+                <button class="btn" id="gcMetaCopyBtn">Copy JSON</button>
+                <span id="gcMetaHint" class="gc-modal__hint"></span>
+              </div>
+
+              <div class="gc-note small">
+                If anything here disagrees with the official contract address shown on this page, treat it as unverified.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 
-  <script src={GENESIS_JS} defer></script>
+  <style>
+    .gc-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .gc-meta{margin-top:10px;display:flex;flex-direction:column;gap:10px}
+    .gc-meta__row{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+    .gc-meta__item{display:flex;gap:8px;align-items:center}
+    .gc-meta__label{opacity:.8}
+    .gc-meta__hint{width:100%;opacity:.9;margin-top:-4px;font-size:13px}
+    .gc-status{margin-top:10px}
+    .gc-note{margin-top:10px;opacity:.9;font-size:13px;line-height:1.45}
+    .gc-note.small{font-size:12px}
+    .gc-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+    .gc-mintrow{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+    .gc-mintHint{opacity:.9;font-size:13px}
+    .gc-nft{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+    .gc-nft img{width:220px;max-width:100%;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.25)}
+    .gc-footnote{margin:18px 0 0;opacity:.8;font-size:12px}
+
+    /* Modal */
+    .gc-modal{position:fixed;inset:0;z-index:1000;display:none}
+    .gc-modal[aria-hidden="false"]{display:block}
+    .gc-modal__backdrop{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter: blur(3px)}
+    .gc-modal__panel{position:relative;max-width:980px;margin:60px auto;padding:16px;border-radius:18px;border:1px solid rgba(255,255,255,.12);background:rgba(15,15,18,.88);box-shadow:0 20px 60px rgba(0,0,0,.45)}
+    .gc-modal__top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+    .gc-modal__title{margin:8px 0 0;font-size:22px}
+    .gc-modal__sub{margin:6px 0 0;opacity:.85;font-size:13px}
+    .gc-modal__close{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;border-radius:10px;padding:8px 10px;cursor:pointer}
+    .gc-modal__body{margin-top:14px}
+    .gc-modal__grid{display:grid;grid-template-columns: 320px 1fr;gap:16px}
+    .gc-modal__media img{width:100%;border-radius:16px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.25)}
+    .gc-attrs{margin-top:12px}
+    .gc-attrs__title{font-weight:700;margin-bottom:8px}
+    .gc-attrs__list{display:flex;flex-direction:column;gap:8px}
+    .gc-attr{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)}
+    .gc-attr__k{opacity:.9;font-weight:700}
+    .gc-attr__v{opacity:.95}
+    .gc-modal__actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+    .gc-modal__hint{opacity:.85;font-size:12px}
+
+    @media (max-width: 900px){
+      .gc-modal__panel{margin:16px}
+      .gc-modal__grid{grid-template-columns:1fr}
+      .gc-nft img{width:200px}
+    }
+  </style>
+
+  <script>
+    // expose base to inline logic if needed
+    window.__CAPI_BASE__ = "{BASE}";
+  </script>
+
+  <!-- Genesis eligibility logic (balance, short-by, countdown, mint state) -->
+  <script src={withBase("/js/genesis-check.js")} defer></script>
+
+  <!-- Metadata modal logic (replaces /genesis-metadata UI) -->
+  <script is:inline>
+    (function(){
+      const btn = document.getElementById("gcMetaBtn");
+      const modal = document.getElementById("gcMetaModal");
+      const closeBtn = document.getElementById("gcMetaClose");
+      const rawBtn = document.getElementById("gcMetaRawBtn");
+      const copyBtn = document.getElementById("gcMetaCopyBtn");
+      const hint = document.getElementById("gcMetaHint");
+
+      const nameEl = document.getElementById("gcMetaName");
+      const descEl = document.getElementById("gcMetaDesc");
+      const extEl  = document.getElementById("gcMetaExternal");
+      const imgEl  = document.getElementById("gcMetaImage");
+      const attrsEl = document.getElementById("gcMetaAttrs");
+
+      function withBasePath(p){
+        const base = (window.__CAPI_BASE__ || "/");
+        const clean = String(p || "");
+        if (!clean) return clean;
+        if (!clean.startsWith("/")) return clean;
+        return base.endsWith("/") ? (base.slice(0,-1) + clean) : (base + clean);
+      }
+
+      function open(){
+        modal.setAttribute("aria-hidden","false");
+        document.body.style.overflow = "hidden";
+      }
+      function close(){
+        modal.setAttribute("aria-hidden","true");
+        document.body.style.overflow = "";
+        if (hint) hint.textContent = "";
+      }
+
+      function setAttrs(attrs){
+        attrsEl.innerHTML = "";
+        if (!Array.isArray(attrs) || attrs.length === 0){
+          const d = document.createElement("div");
+          d.className = "gc-attrs__empty";
+          d.textContent = "No attributes found.";
+          attrsEl.appendChild(d);
+          return;
+        }
+        for (const a of attrs){
+          const k = a && (a.trait_type || a.traitType || a.key) ? String(a.trait_type || a.traitType || a.key) : "Trait";
+          const v = a && (a.value !== undefined) ? String(a.value) : "—";
+          const row = document.createElement("div");
+          row.className = "gc-attr";
+          row.innerHTML = `<div class="gc-attr__k"></div><div class="gc-attr__v mono"></div>`;
+          row.querySelector(".gc-attr__k").textContent = k;
+          row.querySelector(".gc-attr__v").textContent = v;
+          attrsEl.appendChild(row);
+        }
+      }
+
+      async function loadMetadata(){
+        const CFG = window.CAPI_CONFIG || {};
+        const G = CFG.genesisNft || {};
+        const jsonPath = withBasePath(G.metadataJsonPath || "/genesis/metadata/1.json");
+        const imagePath = withBasePath(G.imagePath || "/genesis/images/genesis.png");
+
+        // keep links consistent with config
+        rawBtn.href = jsonPath;
+        imgEl.src = imagePath;
+
+        try{
+          const r = await fetch(jsonPath, { cache: "no-store" });
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          const data = await r.json();
+
+          nameEl.textContent = data.name || "Genesis Council";
+          descEl.textContent = data.description || "—";
+
+          const external = data.external_url || data.externalUrl || "";
+          if (external){
+            extEl.textContent = external;
+            extEl.href = external;
+            extEl.style.pointerEvents = "";
+            extEl.style.opacity = "1";
+          } else {
+            extEl.textContent = "—";
+            extEl.href = "#";
+            extEl.style.pointerEvents = "none";
+            extEl.style.opacity = ".7";
+          }
+
+          // Allow metadata to override image if present
+          if (data.image){
+            imgEl.src = data.image;
+          }
+
+          setAttrs(data.attributes || []);
+          copyBtn.dataset.json = JSON.stringify(data, null, 2);
+        } catch (e){
+          nameEl.textContent = "—";
+          descEl.textContent = "Could not load metadata. Please try again.";
+          extEl.textContent = "—";
+          extEl.href = "#";
+          setAttrs([]);
+          copyBtn.dataset.json = "";
+          if (hint) hint.textContent = "Metadata fetch failed. Check if the JSON path is reachable.";
+        }
+      }
+
+      btn && btn.addEventListener("click", async () => {
+        open();
+        await loadMetadata();
+      });
+
+      closeBtn && closeBtn.addEventListener("click", close);
+
+      modal && modal.addEventListener("click", (e) => {
+        const t = e.target;
+        if (t && t.getAttribute && t.getAttribute("data-close") === "1") close();
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && modal && modal.getAttribute("aria-hidden") === "false") close();
+      });
+
+      copyBtn && copyBtn.addEventListener("click", async () => {
+        const txt = copyBtn.dataset.json || "";
+        if (!txt){
+          if (hint) hint.textContent = "Nothing to copy.";
+          return;
+        }
+        try{
+          await navigator.clipboard.writeText(txt);
+          if (hint) hint.textContent = "Copied ✅";
+          setTimeout(() => { if (hint) hint.textContent = ""; }, 1200);
+        } catch(_){
+          if (hint) hint.textContent = "Copy failed. Your browser may block clipboard access.";
+        }
+      });
+
+      // Keep the hero Raw JSON link aligned to config too (optional)
+      const rawLink = document.getElementById("gcRawJsonLink");
+      if (rawLink){
+        const CFG = window.CAPI_CONFIG || {};
+        const G = CFG.genesisNft || {};
+        rawLink.href = withBasePath(G.metadataJsonPath || rawLink.getAttribute("href"));
+      }
+    })();
+  </script>
 </BaseLayout>
