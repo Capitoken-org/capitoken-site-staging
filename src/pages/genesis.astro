@@ -241,16 +241,11 @@ const withBase = (p) => {
     }
   </style>
 
-  <script>
-    // expose base to inline logic if needed
-    window.__CAPI_BASE__ = "{BASE}";
-  </script>
-
   <!-- Genesis eligibility logic (balance, short-by, countdown, mint state) -->
   <script src={withBase("/js/genesis-check.js")} defer></script>
 
   <!-- Metadata modal logic (replaces /genesis-metadata UI) -->
-  <script is:inline>
+  <script is:inline define:vars={{ BASE }}>
     (function(){
       const btn = document.getElementById("gcMetaBtn");
       const modal = document.getElementById("gcMetaModal");
@@ -266,7 +261,7 @@ const withBase = (p) => {
       const attrsEl = document.getElementById("gcMetaAttrs");
 
       function withBasePath(p){
-        const base = (window.__CAPI_BASE__ || "/");
+        const base = (typeof BASE === "string" && BASE) ? BASE : "/";
         const clean = String(p || "");
         if (!clean) return clean;
         if (!clean.startsWith("/")) return clean;
