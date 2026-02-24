@@ -299,6 +299,15 @@ const withBase = (p) => {
         }
       }
 
+      function sameOrigin(urlStr){
+        try{
+          const u = new URL(urlStr, window.location.href);
+          return u.origin === window.location.origin;
+        } catch(_){
+          return false;
+        }
+      }
+
       async function loadMetadata(){
         const CFG = window.CAPI_CONFIG || {};
         const G = CFG.genesisNft || {};
@@ -307,7 +316,19 @@ const withBase = (p) => {
 
         // keep links consistent with config
         rawBtn.href = jsonPath;
+
+        // Always start with local image (stable on staging)
         imgEl.src = imagePath;
+        imgEl.dataset.fallback = imagePath;
+
+        // Fallback if any later override fails
+        if (!imgEl.dataset.boundError){
+          imgEl.dataset.boundError = "1";
+          imgEl.addEventListener("error", () => {
+            const fb = imgEl.dataset.fallback || "";
+            if (fb && imgEl.src !== fb) imgEl.src = fb;
+          });
+        }
 
         try{
           const r = await fetch(jsonPath, { cache: "no-store" });
@@ -330,9 +351,15 @@ const withBase = (p) => {
             extEl.style.opacity = ".7";
           }
 
-          // Allow metadata to override image if present
+          // Only override image if it is SAME-ORIGIN (prevents staging from pulling production URL)
           if (data.image){
-            imgEl.src = data.image;
+            const imgUrl = String(data.image);
+            const candidate = imgUrl.startsWith("/") ? withBasePath(imgUrl) : imgUrl;
+
+            if (sameOrigin(candidate)){
+              imgEl.src = candidate;
+            }
+            // If it's cross-origin (e.g., staging viewing capitoken.org), keep local imagePath
           }
 
           setAttrs(data.attributes || []);
