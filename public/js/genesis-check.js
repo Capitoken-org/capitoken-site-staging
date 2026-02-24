@@ -25,28 +25,9 @@
     nftAddr: $("gcNftAddr"),
   };
 
-  const CFG = window.CAPI_CONFIG || {};
-  const G = CFG.genesisNft || {};
-
-  // ✅ Robust token address detection (supports multiple key names)
-  const tokenAddrRaw =
-    CFG.CONTRACT_ADDRESS ||
-    CFG.CAPI_CONTRACT_ADDRESS ||
-    CFG.TOKEN_CONTRACT_ADDRESS ||
-    CFG.TOKEN_ADDRESS ||
-    CFG.CAPI_ADDRESS ||
-    "";
-
-  const TOKEN_ADDR = String(tokenAddrRaw).trim().toLowerCase();
-  const RPC_HTTP = String(CFG.RPC_HTTP || "").trim();
-  const DECIMALS = Number(CFG.TOKEN_DECIMALS_EXPECTED ?? 18);
-
-  const REQUIRED_CAPI = BigInt(G.minCapiBalance ?? 150000000);
-  const CLOSE_ISO = String(G.mintClosesUtcIso || "2026-04-17T23:17:00Z");
-  const NFT_ADDR = String(G.nftContractAddress || "").trim();
-
   const ETH_MAINNET_CHAIN_ID = "0x1";
 
+  // -------- helpers --------
   function hasEthereum() {
     return typeof window !== "undefined" && window.ethereum && window.ethereum.request;
   }
@@ -113,10 +94,10 @@
     });
   }
 
-  async function ethCallViaRpcHttp(to, data) {
-    if (!RPC_HTTP) throw new Error("RPC_HTTP not configured");
+  async function ethCallViaRpcHttp(rpcUrl, to, data) {
+    if (!rpcUrl) throw new Error("RPC_HTTP not configured");
     const body = { jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to, data }, "latest"] };
-    const res = await fetch(RPC_HTTP, {
+    const res = await fetch(rpcUrl, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
@@ -127,15 +108,77 @@
     return json.result;
   }
 
-  function updateCountdown() {
+  // ✅ Read config LIVE (at time of action), not at file load.
+  function getLiveConfig() {
+    const CFG = window.CAPI_CONFIG || {};
+    const G = CFG.genesisNft || {};
+
+    const tokenAddrRaw =
+      CFG.CONTRACT_ADDRESS ||
+      CFG.CAPI_CONTRACT_ADDRESS ||
+      CFG.TOKEN_CONTRACT_ADDRESS ||
+      CFG.TOKEN_ADDRESS ||
+      CFG.CAPI_ADDRESS ||
+      "";
+
+    return {
+      CFG,
+      G,
+      TOKEN_ADDR: String(tokenAddrRaw).trim().toLowerCase(),
+      RPC_HTTP: String(CFG.RPC_HTTP || "").trim(),
+      DECIMALS: Number(CFG.TOKEN_DECIMALS_EXPECTED ?? 18),
+      REQUIRED_CAPI: BigInt(G.minCapiBalance ?? 150000000),
+      CLOSE_ISO: String(G.mintClosesUtcIso || "2026-04-17T23:17:00Z"),
+      NFT_ADDR: String(G.nftContractAddress || "").trim(),
+    };
+  }
+
+  function setNftAddr(nftAddr) {
+    if (!els.nftAddr) return;
+    if (nftAddr && /^0x[a-fA-F0-9]{40}$/.test(nftAddr)) els.nftAddr.textContent = nftAddr;
+    else els.nftAddr.textContent = "TBA";
+  }
+
+  function setRequiredText(requiredCapi) {
+    if (!els.required) return;
+    els.required.textContent = `≥ ${commaInt(requiredCapi.toString())} CAPI`;
+  }
+
+  function setMintState({ connected, eligible, nftAddrOk }) {
+    if (!els.mintBtn || !els.mintHint) return;
+
+    if (!connected) {
+      els.mintBtn.disabled = true;
+      els.mintBtn.textContent = "Mint (coming soon)";
+      els.mintHint.textContent = "Connect wallet to check eligibility.";
+      return;
+    }
+    if (!eligible) {
+      els.mintBtn.disabled = true;
+      els.mintBtn.textContent = "Mint (locked)";
+      els.mintHint.textContent = "Not eligible yet — reach the required CAPI balance.";
+      return;
+    }
+    if (!nftAddrOk) {
+      els.mintBtn.disabled = true;
+      els.mintBtn.textContent = "Mint (coming soon)";
+      els.mintHint.textContent = "Eligible ✅ Mint opens when the official NFT contract is deployed.";
+      return;
+    }
+    els.mintBtn.disabled = true;
+    els.mintBtn.textContent = "Mint (coming soon)";
+    els.mintHint.textContent = "Eligible ✅ Mint UI will activate here after contract deployment.";
+  }
+
+  function updateCountdown(closeIso) {
     try {
-      const end = new Date(CLOSE_ISO).getTime();
+      const end = new Date(closeIso).getTime();
       if (Number.isNaN(end)) {
         if (els.countdownText) els.countdownText.textContent = "—";
         if (els.closeUtc) els.closeUtc.textContent = "—";
         return;
       }
-      if (els.closeUtc) els.closeUtc.textContent = CLOSE_ISO;
+      if (els.closeUtc) els.closeUtc.textContent = closeIso;
 
       const now = Date.now();
       let diff = Math.max(0, end - now);
@@ -151,50 +194,26 @@
     } catch (_) {}
   }
 
-  function setNftAddr() {
-    if (!els.nftAddr) return;
-    if (NFT_ADDR && /^0x[a-fA-F0-9]{40}$/.test(NFT_ADDR)) els.nftAddr.textContent = NFT_ADDR;
-    else els.nftAddr.textContent = "TBA";
-  }
-
-  function setRequiredText() {
-    if (!els.required) return;
-    els.required.textContent = `≥ ${commaInt(REQUIRED_CAPI.toString())} CAPI`;
-  }
-
-  function setMintState({ connected, eligible }) {
-    if (!els.mintBtn || !els.mintHint) return;
-
-    if (!connected) {
-      els.mintBtn.disabled = true;
-      els.mintBtn.textContent = "Mint (coming soon)";
-      els.mintHint.textContent = "Connect wallet to check eligibility.";
-      return;
-    }
-    if (!eligible) {
-      els.mintBtn.disabled = true;
-      els.mintBtn.textContent = "Mint (locked)";
-      els.mintHint.textContent = "Not eligible yet — reach the required CAPI balance.";
-      return;
-    }
-    els.mintBtn.disabled = true;
-    els.mintBtn.textContent = "Mint (coming soon)";
-    els.mintHint.textContent = "Eligible ✅ Mint will activate after the official NFT contract is deployed.";
-  }
-
   async function refreshStatus(wallet) {
-    setRequiredText();
-    setNftAddr();
+    const { TOKEN_ADDR, RPC_HTTP, DECIMALS, REQUIRED_CAPI, CLOSE_ISO, NFT_ADDR } = getLiveConfig();
 
-    // ✅ Validate token contract address
+    // Keep UI always synced with live config
+    setRequiredText(REQUIRED_CAPI);
+    setNftAddr(NFT_ADDR);
+    updateCountdown(CLOSE_ISO);
+
+    const nftAddrOk = !!(NFT_ADDR && /^0x[a-fA-F0-9]{40}$/.test(NFT_ADDR));
+
+    // Validate token contract address
     if (!/^0x[a-fA-F0-9]{40}$/.test(TOKEN_ADDR)) {
       setStatus("Config error: token contract address is missing/invalid.");
-      // Helpful hint (not too technical)
       if (els.netHint) {
         els.netHint.textContent =
           "Fix capi-config.js: set CONTRACT_ADDRESS to the official CAPI token contract (0x...).";
       }
-      setMintState({ connected: true, eligible: false });
+      if (els.balance) els.balance.textContent = "—";
+      if (els.shortBy) els.shortBy.textContent = "—";
+      setMintState({ connected: true, eligible: false, nftAddrOk });
       return;
     }
 
@@ -205,7 +224,7 @@
       if (els.refreshBtn) els.refreshBtn.disabled = true;
       if (els.switchBtn) els.switchBtn.style.display = "none";
       setStatus("Connect wallet to check eligibility.");
-      setMintState({ connected: false, eligible: false });
+      setMintState({ connected: false, eligible: false, nftAddrOk });
       return;
     }
 
@@ -231,18 +250,20 @@
     let hex = null;
     let used = "";
 
+    // Try wallet eth_call first
     try {
       hex = await ethCallViaWallet(TOKEN_ADDR, data);
       used = "wallet";
     } catch (_) {}
 
+    // Fallback RPC (read-only)
     if (!hex) {
       try {
-        hex = await ethCallViaRpcHttp(TOKEN_ADDR, data);
+        hex = await ethCallViaRpcHttp(RPC_HTTP, TOKEN_ADDR, data);
         used = "rpc";
       } catch (_) {
         setStatus("Could not read on-chain balance. Check wallet/network and try again. (RPC may be blocked)");
-        setMintState({ connected: true, eligible: false });
+        setMintState({ connected: true, eligible: false, nftAddrOk });
         return;
       }
     }
@@ -258,14 +279,22 @@
     }
 
     setStatus(eligible ? `Eligible ✅ (read via ${used})` : `Not eligible yet ❌ (read via ${used})`);
-    setMintState({ connected: true, eligible });
+    setMintState({ connected: true, eligible, nftAddrOk });
   }
 
   async function init() {
-    updateCountdown();
-    setInterval(updateCountdown, 1000);
-    setRequiredText();
-    setNftAddr();
+    // Start countdown with live config
+    const { CLOSE_ISO } = getLiveConfig();
+    updateCountdown(CLOSE_ISO);
+    setInterval(() => {
+      const { CLOSE_ISO: iso } = getLiveConfig();
+      updateCountdown(iso);
+    }, 1000);
+
+    // Initial UI sync
+    const { REQUIRED_CAPI, NFT_ADDR } = getLiveConfig();
+    setRequiredText(REQUIRED_CAPI);
+    setNftAddr(NFT_ADDR);
 
     if (!hasEthereum()) {
       setStatus("No wallet detected. Install MetaMask to check eligibility.");
@@ -285,7 +314,7 @@
       await refreshStatus(accounts[0]);
     } else {
       setStatus("Connect wallet to check eligibility.");
-      setMintState({ connected: false, eligible: false });
+      setMintState({ connected: false, eligible: false, nftAddrOk: false });
     }
 
     if (els.connectBtn) {
