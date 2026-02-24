@@ -28,13 +28,22 @@
   const CFG = window.CAPI_CONFIG || {};
   const G = CFG.genesisNft || {};
 
-  const TOKEN_ADDR = (CFG.CONTRACT_ADDRESS || "").toLowerCase();
-  const RPC_HTTP = (CFG.RPC_HTTP || "").trim();
+  // ✅ Robust token address detection (supports multiple key names)
+  const tokenAddrRaw =
+    CFG.CONTRACT_ADDRESS ||
+    CFG.CAPI_CONTRACT_ADDRESS ||
+    CFG.TOKEN_CONTRACT_ADDRESS ||
+    CFG.TOKEN_ADDRESS ||
+    CFG.CAPI_ADDRESS ||
+    "";
+
+  const TOKEN_ADDR = String(tokenAddrRaw).trim().toLowerCase();
+  const RPC_HTTP = String(CFG.RPC_HTTP || "").trim();
   const DECIMALS = Number(CFG.TOKEN_DECIMALS_EXPECTED ?? 18);
 
   const REQUIRED_CAPI = BigInt(G.minCapiBalance ?? 150000000);
   const CLOSE_ISO = String(G.mintClosesUtcIso || "2026-04-17T23:17:00Z");
-  const NFT_ADDR = (G.nftContractAddress || "").trim();
+  const NFT_ADDR = String(G.nftContractAddress || "").trim();
 
   const ETH_MAINNET_CHAIN_ID = "0x1";
 
@@ -150,8 +159,7 @@
 
   function setRequiredText() {
     if (!els.required) return;
-    const req = commaInt(REQUIRED_CAPI.toString());
-    els.required.textContent = `≥ ${req} CAPI`;
+    els.required.textContent = `≥ ${commaInt(REQUIRED_CAPI.toString())} CAPI`;
   }
 
   function setMintState({ connected, eligible }) {
@@ -169,23 +177,23 @@
       els.mintHint.textContent = "Not eligible yet — reach the required CAPI balance.";
       return;
     }
-    if (!NFT_ADDR || !/^0x[a-fA-F0-9]{40}$/.test(NFT_ADDR)) {
-      els.mintBtn.disabled = true;
-      els.mintBtn.textContent = "Mint (coming soon)";
-      els.mintHint.textContent = "Eligible ✅ Mint opens when the official NFT contract is deployed.";
-      return;
-    }
     els.mintBtn.disabled = true;
     els.mintBtn.textContent = "Mint (coming soon)";
-    els.mintHint.textContent = "Eligible ✅ Mint UI will activate here after contract deployment.";
+    els.mintHint.textContent = "Eligible ✅ Mint will activate after the official NFT contract is deployed.";
   }
 
   async function refreshStatus(wallet) {
     setRequiredText();
     setNftAddr();
 
-    if (!TOKEN_ADDR || !/^0x[a-fA-F0-9]{40}$/.test(TOKEN_ADDR)) {
+    // ✅ Validate token contract address
+    if (!/^0x[a-fA-F0-9]{40}$/.test(TOKEN_ADDR)) {
       setStatus("Config error: token contract address is missing/invalid.");
+      // Helpful hint (not too technical)
+      if (els.netHint) {
+        els.netHint.textContent =
+          "Fix capi-config.js: set CONTRACT_ADDRESS to the official CAPI token contract (0x...).";
+      }
       setMintState({ connected: true, eligible: false });
       return;
     }
@@ -196,7 +204,6 @@
       if (els.walletRow) els.walletRow.style.display = "none";
       if (els.refreshBtn) els.refreshBtn.disabled = true;
       if (els.switchBtn) els.switchBtn.style.display = "none";
-      if (els.netHint) els.netHint.textContent = "";
       setStatus("Connect wallet to check eligibility.");
       setMintState({ connected: false, eligible: false });
       return;
@@ -215,7 +222,7 @@
     if (els.switchBtn) els.switchBtn.style.display = wrongNetwork ? "" : "none";
     if (els.netHint) {
       els.netHint.textContent = wrongNetwork
-        ? "You are not on Ethereum Mainnet. Click “Switch to Ethereum”. (We can still read balance via RPC fallback.)"
+        ? "You are not on Ethereum Mainnet. Click “Switch to Ethereum”. (RPC fallback can still read balance.)"
         : "";
     }
 
@@ -224,38 +231,33 @@
     let hex = null;
     let used = "";
 
-    // 1) Try wallet
     try {
       hex = await ethCallViaWallet(TOKEN_ADDR, data);
       used = "wallet";
     } catch (_) {}
 
-    // 2) Fallback RPC
     if (!hex) {
       try {
         hex = await ethCallViaRpcHttp(TOKEN_ADDR, data);
         used = "rpc";
-      } catch (e) {
-        const extra = !RPC_HTTP ? " RPC_HTTP is empty." : " RPC_HTTP request failed (possible CORS/origin block).";
-        setStatus("Could not read on-chain balance. Check wallet/network and try again." + extra);
+      } catch (_) {
+        setStatus("Could not read on-chain balance. Check wallet/network and try again. (RPC may be blocked)");
         setMintState({ connected: true, eligible: false });
         return;
       }
     }
 
     const balWei = hexToBigInt(hex);
-    const balText = formatUnits(balWei, DECIMALS);
-    if (els.balance) els.balance.textContent = `${balText} CAPI`;
-
     const reqWei = REQUIRED_CAPI * (10n ** BigInt(DECIMALS));
-    const shortWei = reqWei > balWei ? reqWei - balWei : 0n;
     const eligible = balWei >= reqWei;
 
-    if (els.shortBy) els.shortBy.textContent = eligible ? "0 CAPI" : `${formatUnits(shortWei, DECIMALS)} CAPI`;
+    if (els.balance) els.balance.textContent = `${formatUnits(balWei, DECIMALS)} CAPI`;
+    if (els.shortBy) {
+      const shortWei = reqWei > balWei ? reqWei - balWei : 0n;
+      els.shortBy.textContent = eligible ? "0 CAPI" : `${formatUnits(shortWei, DECIMALS)} CAPI`;
+    }
 
-    if (eligible) setStatus(`Eligible ✅ (read via ${used})`);
-    else setStatus(`Not eligible yet ❌ (read via ${used})`);
-
+    setStatus(eligible ? `Eligible ✅ (read via ${used})` : `Not eligible yet ❌ (read via ${used})`);
     setMintState({ connected: true, eligible });
   }
 
@@ -266,7 +268,7 @@
     setNftAddr();
 
     if (!hasEthereum()) {
-      setStatus("No wallet detected. Install a wallet (e.g., MetaMask) to check eligibility.");
+      setStatus("No wallet detected. Install MetaMask to check eligibility.");
       if (els.connectBtn) els.connectBtn.disabled = true;
       return;
     }
@@ -276,12 +278,11 @@
       accounts = await getAccounts();
     } catch (_) {}
 
-    const connected = accounts && accounts.length > 0;
-    if (connected) {
-      const wallet = accounts[0];
-      if (els.wallet) els.wallet.textContent = wallet;
+    if (accounts && accounts[0]) {
+      if (els.wallet) els.wallet.textContent = accounts[0];
+      if (els.walletRow) els.walletRow.style.display = "";
       setStatus("Wallet connected. Reading on-chain balance…");
-      await refreshStatus(wallet);
+      await refreshStatus(accounts[0]);
     } else {
       setStatus("Connect wallet to check eligibility.");
       setMintState({ connected: false, eligible: false });
@@ -294,6 +295,7 @@
           const wallet = accs && accs[0];
           if (wallet) {
             if (els.wallet) els.wallet.textContent = wallet;
+            if (els.walletRow) els.walletRow.style.display = "";
             setStatus("Wallet connected. Reading on-chain balance…");
             await refreshStatus(wallet);
           }
@@ -325,30 +327,10 @@
           setStatus("Switched network. Refreshing…");
           await refreshStatus(wallet);
         } catch (_) {
-          setStatus("Network switch cancelled. You can still refresh; RPC fallback may work.");
+          setStatus("Network switch cancelled.");
         }
       });
     }
-
-    try {
-      window.ethereum.on("accountsChanged", async (accs) => {
-        const wallet = accs && accs[0];
-        if (wallet) {
-          if (els.wallet) els.wallet.textContent = wallet;
-          setStatus("Account changed. Reading on-chain balance…");
-          await refreshStatus(wallet);
-        } else {
-          await refreshStatus(null);
-        }
-      });
-
-      window.ethereum.on("chainChanged", async () => {
-        const accs = await getAccounts();
-        const wallet = accs && accs[0];
-        setStatus("Network changed. Refreshing…");
-        await refreshStatus(wallet);
-      });
-    } catch (_) {}
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
