@@ -10,7 +10,7 @@ const modal = document.getElementById("modal");
 const closeModal = document.getElementById("closeModal");
 const metaContent = document.getElementById("metaContent");
 
-const REQUIRED = BigInt("150000000000000000000000000"); // 150M * 1e18
+const REQUIRED = BigInt("150000000000000000000000000");
 const TOKEN_ADDRESS = window.CAPI_CONFIG?.CONTRACT_ADDRESS;
 
 async function connect() {
@@ -32,10 +32,7 @@ async function loadBalance(wallet) {
   const result = await ethereum.request({
     method: "eth_call",
     params: [
-      {
-        to: TOKEN_ADDRESS,
-        data: data
-      },
+      { to: TOKEN_ADDRESS, data },
       "latest"
     ]
   });
@@ -56,10 +53,23 @@ async function loadMetadata() {
   const res = await fetch("/genesis/metadata/1.json");
   const data = await res.json();
 
+  let attrsHtml = "";
+
+  if (Array.isArray(data.attributes)) {
+    data.attributes.forEach(attr => {
+      attrsHtml += `
+        <p><strong>${attr.trait_type}:</strong> ${attr.value}</p>
+      `;
+    });
+  }
+
   metaContent.innerHTML = `
+    <img src="/genesis/images/genesis.png" style="max-width:250px;border-radius:12px;margin-bottom:15px;" />
     <p><strong>Name:</strong> ${data.name}</p>
     <p><strong>Description:</strong> ${data.description}</p>
     <p><strong>External URL:</strong> ${data.external_url}</p>
+    <hr style="margin:15px 0;opacity:.2;">
+    ${attrsHtml}
   `;
 }
 
