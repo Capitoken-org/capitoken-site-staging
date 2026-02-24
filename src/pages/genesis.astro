@@ -2,7 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 
 const BASE = import.meta.env.BASE_URL || "/";
-const withBase = (p) => {
+const withBase = (p: string) => {
   const clean = String(p || "");
   return clean.startsWith("/") ? `${BASE}${clean.slice(1)}` : `${BASE}${clean}`;
 };
@@ -13,133 +13,137 @@ const withBase = (p) => {
   description="CAPI Genesis Council eligibility portal — connect wallet to verify CAPI balance and claim status."
 >
   <main class="gc-page">
-    <section class="hero">
-      <div class="pill"><span class="pill__dot"></span><span>Genesis Council</span></div>
-      <h1>CAPI Genesis Council</h1>
-      <p class="hero__lead">
-        This page is an <strong>on-chain</strong> eligibility portal. Connect your wallet to see your exact CAPI balance
-        and how much you're missing. This NFT is an optional membership layer for identity and community direction.
-        It does not grant financial rights. If it's not listed on capitoken.org, assume it's not official.
-      </p>
+    <!-- IMPORTANT: Use the SAME global container class as the rest of the site -->
+    <div class="container">
+      <section class="hero">
+        <div class="pill"><span class="pill__dot"></span><span>Genesis Council</span></div>
+        <h1>CAPI Genesis Council</h1>
+        <p class="hero__lead">
+          This page is an <strong>on-chain</strong> eligibility portal. Connect your wallet to see your exact CAPI balance
+          and how much you're missing. This NFT is an optional membership layer for identity and community direction.
+          It does not grant financial rights. If it's not listed on capitoken.org, assume it's not official.
+        </p>
 
-      <div class="gc-actions">
-        <button id="gcConnectBtn" class="btn btn--primary">Connect Wallet</button>
-        <button id="gcRefreshBtn" class="btn" disabled>Refresh</button>
+        <div class="gc-actions">
+          <button id="gcConnectBtn" class="btn btn--primary">Connect Wallet</button>
+          <button id="gcRefreshBtn" class="btn" disabled>Refresh</button>
 
-        <button id="gcMetaBtn" class="btn">View Metadata</button>
+          <button id="gcMetaBtn" class="btn">View Metadata</button>
 
-        <a class="btn" id="gcRawJsonLink" href={withBase("/genesis/metadata/1.json")} target="_blank" rel="noreferrer">Raw JSON</a>
+          <a class="btn" id="gcRawJsonLink" href={withBase("/genesis/metadata/1.json")} target="_blank" rel="noreferrer">Raw JSON</a>
 
-        <button id="gcSwitchBtn" class="btn" style="display:none;">Switch to Ethereum</button>
+          <button id="gcSwitchBtn" class="btn" style="display:none;">Switch to Ethereum</button>
+        </div>
+
+        <div class="gc-meta">
+          <div id="gcWalletRow" class="gc-meta__row" style="display:none;">
+            <div class="gc-meta__item">
+              <span class="gc-meta__label">Wallet:</span>
+              <span id="gcWallet" class="mono">—</span>
+            </div>
+
+            <div class="gc-meta__item">
+              <span class="gc-meta__label">Network:</span>
+              <span id="gcNetText" class="badge">—</span>
+            </div>
+
+            <div id="gcNetHint" class="gc-meta__hint"></div>
+          </div>
+
+          <div class="gc-meta__row">
+            <div class="gc-meta__item">
+              <span class="gc-meta__label">Mint closes in:</span>
+              <span id="gcCountdownText" class="mono">—</span>
+            </div>
+            <div class="gc-meta__item">
+              <span class="gc-meta__label">Close time (UTC):</span>
+              <span id="gcCloseUtc" class="mono">—</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="grid grid--2">
+          <!-- Eligibility -->
+          <div class="card">
+            <div class="card__title">Eligibility (On-chain)</div>
+
+            <div class="kv">
+              <div class="kv__row">
+                <strong>Required</strong>
+                <span id="gcRequired" class="mono">—</span>
+              </div>
+              <div class="kv__row">
+                <strong>Your balance</strong>
+                <span id="gcBalance" class="mono">—</span>
+              </div>
+              <div class="kv__row">
+                <strong>Short by</strong>
+                <span id="gcShortBy" class="mono">—</span>
+              </div>
+            </div>
+
+            <div class="gc-status">
+              <span class="badge" id="gcStatusText">Connect wallet to check eligibility.</span>
+            </div>
+
+            <div class="gc-note">
+              Balance is read directly from the official CAPI contract. If your wallet is on the wrong network, we’ll ask
+              you to switch — and we also use a safe read-only RPC fallback for reliability.
+            </div>
+
+            <div class="gc-cta">
+              <a class="btn" href={withBase("/#launch")}>Go to Launch Panel</a>
+              <a class="btn" href={withBase("/verify")}>Verify Official Links</a>
+            </div>
+          </div>
+
+          <!-- Mint -->
+          <div class="card">
+            <div class="card__title">Mint (ERC-721)</div>
+
+            <div class="kv">
+              <div class="kv__row">
+                <strong>Max supply</strong>
+                <span class="mono">7000</span>
+              </div>
+              <div class="kv__row">
+                <strong>Max per wallet</strong>
+                <span class="mono">1</span>
+              </div>
+              <div class="kv__row">
+                <strong>Contract</strong>
+                <span id="gcNftAddr" class="mono">TBA</span>
+              </div>
+            </div>
+
+            <div class="gc-note">
+              Mint is free (gas only). The official contract address will be posted here once deployed and verified.
+            </div>
+
+            <div class="gc-mintrow">
+              <button id="gcMintBtn" class="btn btn--primary" disabled>Mint (coming soon)</button>
+              <div id="gcMintHint" class="gc-mintHint">Connect wallet to check eligibility.</div>
+            </div>
+
+            <div class="gc-nft">
+              <img id="gcNftImage" src={withBase("/genesis/images/genesis.png")} alt="Genesis Council NFT preview" loading="lazy" />
+              <div class="gc-note small">Safety: never trust DMs. Always verify the contract address on this website before interacting.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="gc-footnote">
+        This portal is designed to drive on-chain participation through transparent rules — not promises.
       </div>
-
-      <div class="gc-meta">
-        <div id="gcWalletRow" class="gc-meta__row" style="display:none;">
-          <div class="gc-meta__item">
-            <span class="gc-meta__label">Wallet:</span>
-            <span id="gcWallet" class="mono">—</span>
-          </div>
-
-          <div class="gc-meta__item">
-            <span class="gc-meta__label">Network:</span>
-            <span id="gcNetText" class="badge">—</span>
-          </div>
-
-          <div id="gcNetHint" class="gc-meta__hint"></div>
-        </div>
-
-        <div class="gc-meta__row">
-          <div class="gc-meta__item">
-            <span class="gc-meta__label">Mint closes in:</span>
-            <span id="gcCountdownText" class="mono">—</span>
-          </div>
-          <div class="gc-meta__item">
-            <span class="gc-meta__label">Close time (UTC):</span>
-            <span id="gcCloseUtc" class="mono">—</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="grid grid--2">
-        <!-- Eligibility -->
-        <div class="card">
-          <div class="card__title">Eligibility (On-chain)</div>
-
-          <div class="kv">
-            <div class="kv__row">
-              <strong>Required</strong>
-              <span id="gcRequired" class="mono">—</span>
-            </div>
-            <div class="kv__row">
-              <strong>Your balance</strong>
-              <span id="gcBalance" class="mono">—</span>
-            </div>
-            <div class="kv__row">
-              <strong>Short by</strong>
-              <span id="gcShortBy" class="mono">—</span>
-            </div>
-          </div>
-
-          <div class="gc-status">
-            <span class="badge" id="gcStatusText">Connect wallet to check eligibility.</span>
-          </div>
-
-          <div class="gc-note">
-            Balance is read directly from the official CAPI contract. If your wallet is on the wrong network, we’ll ask
-            you to switch — and we also use a safe read-only RPC fallback for reliability.
-          </div>
-
-          <div class="gc-cta">
-            <a class="btn" href={withBase("/#launch")}>Go to Launch Panel</a>
-            <a class="btn" href={withBase("/verify")}>Verify Official Links</a>
-          </div>
-        </div>
-
-        <!-- Mint -->
-        <div class="card">
-          <div class="card__title">Mint (ERC-721)</div>
-
-          <div class="kv">
-            <div class="kv__row">
-              <strong>Max supply</strong>
-              <span class="mono">7000</span>
-            </div>
-            <div class="kv__row">
-              <strong>Max per wallet</strong>
-              <span class="mono">1</span>
-            </div>
-            <div class="kv__row">
-              <strong>Contract</strong>
-              <span id="gcNftAddr" class="mono">TBA</span>
-            </div>
-          </div>
-
-          <div class="gc-note">
-            Mint is free (gas only). The official contract address will be posted here once deployed and verified.
-          </div>
-
-          <div class="gc-mintrow">
-            <button id="gcMintBtn" class="btn btn--primary" disabled>Mint (coming soon)</button>
-            <div id="gcMintHint" class="gc-mintHint">Connect wallet to check eligibility.</div>
-          </div>
-
-          <div class="gc-nft">
-            <img id="gcNftImage" src={withBase("/genesis/images/genesis.png")} alt="Genesis Council NFT preview" loading="lazy" />
-            <div class="gc-note small">Safety: never trust DMs. Always verify the contract address on this website before interacting.</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <div class="gc-footnote">
-      This portal is designed to drive on-chain participation through transparent rules — not promises.
     </div>
 
     <!-- Metadata Modal (User-friendly) -->
     <div id="gcMetaModal" class="gc-modal" aria-hidden="true">
       <div class="gc-modal__backdrop" data-close="1"></div>
+
       <div class="gc-modal__panel" role="dialog" aria-modal="true" aria-labelledby="gcMetaTitle">
         <div class="gc-modal__top">
           <div>
@@ -147,15 +151,14 @@ const withBase = (p) => {
             <h2 id="gcMetaTitle" class="gc-modal__title">Genesis Council Metadata</h2>
             <p class="gc-modal__sub">Friendly preview for non-technical users. Raw JSON is still available.</p>
 
-            <!-- NEW: countdown (user-friendly) -->
-            <div class="gc-modal__countdown">
-              <span class="gc-modal__countdownLabel">Mint closes in:</span>
-              <span id="gcMetaCountdown" class="mono">—</span>
-              <span class="gc-modal__countdownSep">•</span>
-              <span class="gc-modal__countdownLabel">UTC:</span>
-              <span id="gcMetaCloseUtc" class="mono">—</span>
+            <!-- FIX: make countdown BIG + obvious -->
+            <div class="gc-modal__countdownWrap">
+              <div class="gc-modal__countdownLabel">Mint closes in</div>
+              <div class="gc-modal__countdownValue mono" id="gcMetaCountdown">—</div>
+              <div class="gc-modal__countdownUtc mono" id="gcMetaCloseUtc">—</div>
             </div>
           </div>
+
           <button id="gcMetaClose" class="gc-modal__close" aria-label="Close">✕</button>
         </div>
 
@@ -205,12 +208,7 @@ const withBase = (p) => {
   </main>
 
   <style>
-    /* NEW: force the page to align with the same centered width as the rest of the site */
-    .gc-page{
-      width:min(var(--container), calc(100% - 36px));
-      margin:0 auto;
-    }
-
+    /* keep minimal page-specific styles; rely on global .container for alignment */
     .gc-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
     .gc-meta{margin-top:10px;display:flex;flex-direction:column;gap:10px}
     .gc-meta__row{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
@@ -237,18 +235,21 @@ const withBase = (p) => {
     .gc-modal__sub{margin:6px 0 0;opacity:.85;font-size:13px}
     .gc-modal__close{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;border-radius:10px;padding:8px 10px;cursor:pointer}
 
-    /* NEW: countdown strip inside modal */
-    .gc-modal__countdown{
-      margin-top:10px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      align-items:center;
-      opacity:.95;
-      font-size:13px;
+    /* FIX: obvious countdown block */
+    .gc-modal__countdownWrap{
+      margin-top:12px;
+      display:inline-flex;
+      flex-direction:column;
+      gap:6px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.05);
+      max-width:fit-content;
     }
-    .gc-modal__countdownLabel{opacity:.85}
-    .gc-modal__countdownSep{opacity:.55}
+    .gc-modal__countdownLabel{opacity:.85;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+    .gc-modal__countdownValue{font-size:18px;font-weight:800}
+    .gc-modal__countdownUtc{opacity:.85;font-size:12px}
 
     .gc-modal__body{margin-top:14px}
     .gc-modal__grid{display:grid;grid-template-columns: 320px 1fr;gap:16px}
@@ -286,7 +287,7 @@ const withBase = (p) => {
       const imgEl  = document.getElementById("gcMetaImage");
       const attrsEl = document.getElementById("gcMetaAttrs");
 
-      // NEW countdown elements
+      // countdown elements (modal)
       const cdEl = document.getElementById("gcMetaCountdown");
       const utcEl = document.getElementById("gcMetaCloseUtc");
 
@@ -341,7 +342,6 @@ const withBase = (p) => {
         }
       }
 
-      // NEW: countdown formatter
       function formatCountdown(ms){
         if (!isFinite(ms)) return "—";
         if (ms <= 0) return "Closed";
@@ -360,11 +360,10 @@ const withBase = (p) => {
           utcEl.textContent = "—";
           return;
         }
-        utcEl.textContent = targetUtcIso;
+        utcEl.textContent = `UTC ${targetUtcIso}`;
         const target = Date.parse(targetUtcIso);
         const tick = () => {
-          const now = Date.now();
-          cdEl.textContent = formatCountdown(target - now);
+          cdEl.textContent = formatCountdown(target - Date.now());
         };
         tick();
         if (cdTimer) clearInterval(cdTimer);
@@ -377,7 +376,7 @@ const withBase = (p) => {
         const jsonPath = withBasePath(G.metadataJsonPath || "/genesis/metadata/1.json");
         const imagePath = withBasePath(G.imagePath || "/genesis/images/genesis.png");
 
-        // NEW: countdown in modal uses config mint close
+        // countdown (modal)
         startCountdown(G.mintClosesUtcIso || "");
 
         rawBtn.href = jsonPath;
