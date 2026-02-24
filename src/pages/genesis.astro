@@ -12,7 +12,7 @@ const withBase = (p) => {
   title="CAPI Genesis Council | Capitoken"
   description="CAPI Genesis Council eligibility portal — connect wallet to verify CAPI balance and claim status."
 >
-  <main class="container">
+  <main class="gc-page">
     <section class="hero">
       <div class="pill"><span class="pill__dot"></span><span>Genesis Council</span></div>
       <h1>CAPI Genesis Council</h1>
@@ -26,7 +26,6 @@ const withBase = (p) => {
         <button id="gcConnectBtn" class="btn btn--primary">Connect Wallet</button>
         <button id="gcRefreshBtn" class="btn" disabled>Refresh</button>
 
-        <!-- Replaces the old /genesis-metadata page (no more duplicate UI) -->
         <button id="gcMetaBtn" class="btn">View Metadata</button>
 
         <a class="btn" id="gcRawJsonLink" href={withBase("/genesis/metadata/1.json")} target="_blank" rel="noreferrer">Raw JSON</a>
@@ -147,6 +146,15 @@ const withBase = (p) => {
             <div class="pill"><span class="pill__dot"></span><span>Metadata</span></div>
             <h2 id="gcMetaTitle" class="gc-modal__title">Genesis Council Metadata</h2>
             <p class="gc-modal__sub">Friendly preview for non-technical users. Raw JSON is still available.</p>
+
+            <!-- NEW: countdown (user-friendly) -->
+            <div class="gc-modal__countdown">
+              <span class="gc-modal__countdownLabel">Mint closes in:</span>
+              <span id="gcMetaCountdown" class="mono">—</span>
+              <span class="gc-modal__countdownSep">•</span>
+              <span class="gc-modal__countdownLabel">UTC:</span>
+              <span id="gcMetaCloseUtc" class="mono">—</span>
+            </div>
           </div>
           <button id="gcMetaClose" class="gc-modal__close" aria-label="Close">✕</button>
         </div>
@@ -197,6 +205,12 @@ const withBase = (p) => {
   </main>
 
   <style>
+    /* NEW: force the page to align with the same centered width as the rest of the site */
+    .gc-page{
+      width:min(var(--container), calc(100% - 36px));
+      margin:0 auto;
+    }
+
     .gc-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
     .gc-meta{margin-top:10px;display:flex;flex-direction:column;gap:10px}
     .gc-meta__row{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
@@ -222,6 +236,20 @@ const withBase = (p) => {
     .gc-modal__title{margin:8px 0 0;font-size:22px}
     .gc-modal__sub{margin:6px 0 0;opacity:.85;font-size:13px}
     .gc-modal__close{border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;border-radius:10px;padding:8px 10px;cursor:pointer}
+
+    /* NEW: countdown strip inside modal */
+    .gc-modal__countdown{
+      margin-top:10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      opacity:.95;
+      font-size:13px;
+    }
+    .gc-modal__countdownLabel{opacity:.85}
+    .gc-modal__countdownSep{opacity:.55}
+
     .gc-modal__body{margin-top:14px}
     .gc-modal__grid{display:grid;grid-template-columns: 320px 1fr;gap:16px}
     .gc-modal__media img{width:100%;border-radius:16px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.25)}
@@ -241,10 +269,8 @@ const withBase = (p) => {
     }
   </style>
 
-  <!-- Genesis eligibility logic (balance, short-by, countdown, mint state) -->
   <script src={withBase("/js/genesis-check.js")} defer></script>
 
-  <!-- Metadata modal logic (replaces /genesis-metadata UI) -->
   <script is:inline define:vars={{ BASE }}>
     (function(){
       const btn = document.getElementById("gcMetaBtn");
@@ -259,6 +285,12 @@ const withBase = (p) => {
       const extEl  = document.getElementById("gcMetaExternal");
       const imgEl  = document.getElementById("gcMetaImage");
       const attrsEl = document.getElementById("gcMetaAttrs");
+
+      // NEW countdown elements
+      const cdEl = document.getElementById("gcMetaCountdown");
+      const utcEl = document.getElementById("gcMetaCloseUtc");
+
+      let cdTimer = null;
 
       function withBasePath(p){
         const base = (typeof BASE === "string" && BASE) ? BASE : "/";
@@ -276,6 +308,7 @@ const withBase = (p) => {
         modal.setAttribute("aria-hidden","true");
         document.body.style.overflow = "";
         if (hint) hint.textContent = "";
+        if (cdTimer) { clearInterval(cdTimer); cdTimer = null; }
       }
 
       function setAttrs(attrs){
@@ -308,20 +341,50 @@ const withBase = (p) => {
         }
       }
 
+      // NEW: countdown formatter
+      function formatCountdown(ms){
+        if (!isFinite(ms)) return "—";
+        if (ms <= 0) return "Closed";
+        const s = Math.floor(ms / 1000);
+        const d = Math.floor(s / 86400);
+        const h = Math.floor((s % 86400) / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const ss = s % 60;
+        return `${d}d ${h}h ${m}m ${ss}s`;
+      }
+
+      function startCountdown(targetUtcIso){
+        if (!cdEl || !utcEl) return;
+        if (!targetUtcIso){
+          cdEl.textContent = "—";
+          utcEl.textContent = "—";
+          return;
+        }
+        utcEl.textContent = targetUtcIso;
+        const target = Date.parse(targetUtcIso);
+        const tick = () => {
+          const now = Date.now();
+          cdEl.textContent = formatCountdown(target - now);
+        };
+        tick();
+        if (cdTimer) clearInterval(cdTimer);
+        cdTimer = setInterval(tick, 1000);
+      }
+
       async function loadMetadata(){
         const CFG = window.CAPI_CONFIG || {};
         const G = CFG.genesisNft || {};
         const jsonPath = withBasePath(G.metadataJsonPath || "/genesis/metadata/1.json");
         const imagePath = withBasePath(G.imagePath || "/genesis/images/genesis.png");
 
-        // keep links consistent with config
+        // NEW: countdown in modal uses config mint close
+        startCountdown(G.mintClosesUtcIso || "");
+
         rawBtn.href = jsonPath;
 
-        // Always start with local image (stable on staging)
         imgEl.src = imagePath;
         imgEl.dataset.fallback = imagePath;
 
-        // Fallback if any later override fails
         if (!imgEl.dataset.boundError){
           imgEl.dataset.boundError = "1";
           imgEl.addEventListener("error", () => {
@@ -351,15 +414,12 @@ const withBase = (p) => {
             extEl.style.opacity = ".7";
           }
 
-          // Only override image if it is SAME-ORIGIN (prevents staging from pulling production URL)
           if (data.image){
             const imgUrl = String(data.image);
             const candidate = imgUrl.startsWith("/") ? withBasePath(imgUrl) : imgUrl;
-
             if (sameOrigin(candidate)){
               imgEl.src = candidate;
             }
-            // If it's cross-origin (e.g., staging viewing capitoken.org), keep local imagePath
           }
 
           setAttrs(data.attributes || []);
@@ -406,7 +466,6 @@ const withBase = (p) => {
         }
       });
 
-      // Keep the hero Raw JSON link aligned to config too (optional)
       const rawLink = document.getElementById("gcRawJsonLink");
       if (rawLink){
         const CFG = window.CAPI_CONFIG || {};
