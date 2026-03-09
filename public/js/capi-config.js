@@ -35,7 +35,7 @@
       imagePath: "/genesis/images/genesis.png",
 
       // After NFT deployment, set here (keep empty until then)
-      nftContractAddress: "",
+      nftContractAddress: "0x63f818ae9890A73B75Eb978063Ff9F4157e4B587",
     },
 
     // Read-only RPC fallback (no wallet needed)
